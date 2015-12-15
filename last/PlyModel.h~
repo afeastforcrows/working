@@ -41,6 +41,5 @@
 #include "FaceList.h"
 
 FaceList* readPlyModel( const char* filename );
-void calcRitterBoundingSphere(double* center, double* radius, FaceList *fl);
 
 #endif

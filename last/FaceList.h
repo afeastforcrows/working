@@ -135,18 +135,12 @@ public:
 		}
 	}
 
-  void draw( ){
-	
-	
-	
+  void draw( ){		
     glBegin(GL_TRIANGLES);
-    for(int i = 0; i < fc; i++ ){
-	
+    for(int i = 0; i < fc; i++ ){	
       for(int j = 0; j < 3; j++){
-        //glColor3dv(colors[faces[i][j]]);        
-	
+        //glColor3dv(colors[faces[i][j]]);        	
 	glVertex3dv(vertices[faces[i][j]]);
-
 	glNormal3dv(v_normals[faces[i][j]]);
       }
     }

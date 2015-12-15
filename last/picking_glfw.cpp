@@ -407,7 +407,7 @@ public:
   
   bool render( ){
     Vec4 light0_position(10.0, 5.0, 10.0, 1.0);
-    Vec4 light1_position(10.0, 10.0 ,10.0 ,1);
+    Vec4 light1_position(0.0, 14.0 ,0.0 ,1);
     const Vec4 light0_specular(0.6,0.2,0.0,1);
     const Vec4 light1_specular(0.0,0.2,0.6,1);
 	const Vec4 purple_light(0.5,0.0,0.5,1);
@@ -443,15 +443,23 @@ public:
     glUniform4fv(uLight0_position, 1, light0); 
     glUniform4fv(uLight0_color, 1, light0_specular); 
     glUniform4fv(uLight1_position, 1, light1); 
-    //glUniform4fv(uLight1_color, 1, light1_specular); 
+    glUniform4fv(uLight1_color, 1, white_light); 
 
+	Vec3 tmpCenter = centerPosition;
 	if(isKeyPressed('1')){
+		/*Mat3 translate(	1,	0,	5,
+				0,	1,	0,
+				0,	0,	1);
+		centerPosition= translate * centerPosition;*/
+		centerPosition = Vec3(1, 20, 1);
 		tricoModel->draw( );
 		tricoModel = readPlyModel("tricos.ply");
+		//drawSphere(tricoModel->radius, 32, 32);
 		if(isKeyPressed('2')){
 			tricoModel = readPlyModel("trico.ply");
 			//tricoModel->translate();
 		}
+		centerPosition = tmpCenter;
 	}
     glUniform4fv(uAmbient, 1, medium); 
     glUniform4fv(uDiffuse, 1, medium); 
@@ -500,15 +508,11 @@ glEnd();
 	}
    
 /////////////////////////////TRACKBALL STATE////////////////////////////
-	//if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
-	//{
-		//drawSphere(2, 20, 32);
+	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
+	{
 		Vec2 oldPosition = mousePosition;
 		mousePosition = mouseCurrentPosition( );
-		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){	
-			//drawSphere(2, 20, 32);
-			//int mid_x = 250;	
-			//int mid_y = 250;	
+		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){		
 			float angle_y  = 0.0f;				
 			float angle_z  = 0.0f;							
 			
@@ -516,15 +520,13 @@ glEnd();
 			Vec3 _up = normalize(upVector);//up			
 			Vec3 rVec = normalize(cross(f, _up));//right
 
-			// Get the direction from the mouse cursor, set a resonable maneuvering speed
+			// Get the direction from the mouse cursor
 			angle_y = (float)( (oldPosition[0] - mousePosition[0]) ) / 500;		
 			angle_z = (float)( (oldPosition[1] - mousePosition[1]) ) / 500;
 
-			// The higher the value is the faster the camera looks around.
-			centerPosition[1] += angle_z * 2;
-
-			Vec3 vVector = centerPosition - eyePosition;	// Get the view vector
-
+			// Get the view vector
+			Vec3 vVector = centerPosition - eyePosition;
+	
 			centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
 			centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
 
@@ -536,9 +538,9 @@ glEnd();
 			Mat3 xMat3(	1,	0,		0,
 					0,	cos(-angle_z),	-sin(-angle_z),
 					0,	sin(-angle_z),	cos(-angle_z));
-			upVector = xMat3 * upVector;
-
+			upVector = xMat3 * upVector;			
     		}
+	}
 		
 
     if(isKeyPressed('Q')){

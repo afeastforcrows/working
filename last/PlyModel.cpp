@@ -392,7 +392,9 @@ FaceList* readPlyModel( const char* filename ){
   for (i = 0; i < nv; i++) {
 	inputfile.getline(buffer, sizeof(buffer), '\n');
 	sscanf(buffer,"%lf %lf %lf", &(fl->vertices[i][0]), &(fl->vertices[i][1]), &(fl->vertices[i][2]));
-	
+	//fl->vertices[i][0] = i%3-i%10;
+	//fl->vertices[i][1] = i%2-i%10;
+	//fl->vertices[i][2] = i-i%10;
   }
 
   // read face data from PLY file
