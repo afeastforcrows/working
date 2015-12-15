@@ -1,0 +1,40 @@
+8
+
+dir
+4008
+svn+ssh://image.diku.dk/home/closedtissue/svn/ClosedTissue/trunk/projects/trackball.03/src/trackball/demos/opengl/trackball/src
+svn+ssh://image.diku.dk/home/closedtissue/svn/ClosedTissue
+
+
+
+2006-03-17T08:44:08.218027Z
+2304
+sporring
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+290cee88-d601-0410-946d-a821c87ad039
+
+demo.cpp
+file
+
+
+
+
+2006-03-16T07:58:04.000000Z
+9aae335115c8ff6ec4bb1f1772384e07
+2006-03-17T08:44:08.218027Z
+2304
+sporring
+

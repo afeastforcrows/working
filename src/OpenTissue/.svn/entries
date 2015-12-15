@@ -1,0 +1,34 @@
+8
+
+dir
+4008
+svn+ssh://image.diku.dk/home/closedtissue/svn/ClosedTissue/trunk/projects/trackball.03/src/trackball/OpenTissue
+svn+ssh://image.diku.dk/home/closedtissue/svn/ClosedTissue
+
+
+
+2008-02-02T11:20:01.248123Z
+3954
+sporring
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+290cee88-d601-0410-946d-a821c87ad039
+
+trackball
+dir
+
+math
+dir
+
