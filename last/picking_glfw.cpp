@@ -193,6 +193,12 @@ typedef struct sceneObj{
 	}
 
 	void addChild(sceneObj *c){
+		for(int n = 0; n < numChildren; n++)
+		{
+			if(children[n] == c){
+				return;
+			}
+		}
 		children[numChildren] = c;
 		numChildren++;
 	}
@@ -212,16 +218,16 @@ typedef struct sceneObj{
 	
 }sceneObjd;
 
-typedef struct SG{
+typedef struct sceneGraph{
 	//checkpoint
 	//basic data structure to act as scene graph
 	sceneObj *root;
 	sceneObj myObjs[numObj];
-
+	bBox worldBB;
 
 	void init(){
 		myObjs[1].FL = readPlyModel("ply/trico.ply");
-		//myPly[0]->translate(-2.0, 0.0, 2.0);
+		myObjs[1].FL->translate(-2.0, 0.0, 0.0);
 		myObjs[1].FL->scale(2);
 		//calcRitterBoundingSphere(myPly[0]->center, &(myPly[0]->radius), myPly[0]);
 		myObjs[2].FL = readPlyModel("ply/spider.ply");
@@ -235,10 +241,11 @@ typedef struct SG{
 			calcRitterBoundingSphere(myObjs[i].FL->center, &(myObjs[i].FL->radius), myObjs[i].FL);
 			myObjs[i].BB.update(Vec3(myObjs[i].FL->center[0], myObjs[i].FL->center[1], myObjs[i].FL->center[2]), myObjs[i].FL->radius);
 		}
-		
-		myObjs[0].init("World", myObjs[0].BB, NULL);	//scene object that represents the world
-		for(int n = 1; n < 5; n++){
-			myObjs[n].init(myNames[n], myObjs[n-1].BB, myObjs[n-1].FL);
+
+		worldBB.update(Vec3(0,0,0), 10);
+		myObjs[0].init("World", worldBB, NULL);	//scene object that represents the world
+		for(int n = 1; n < 5; n++){			//All objects begin as children of World
+			myObjs[n].init(myNames[n], myObjs[n].BB, myObjs[n].FL);
 			myObjs[0].addChild(&myObjs[n]);
 			myObjs[n].addParent(&myObjs[0]);
 		}
@@ -250,7 +257,56 @@ typedef struct SG{
 		}
 	}
 
-}SGd;
+	void draw(){
+		for(int p = 1; p <5; p++){
+			myObjs[p].FL->draw();
+			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
+			myObjs[p].BB.drawBB();
+		}
+	}
+
+	void update(){
+		float dist;
+		//check for collisions
+		for(int x = 0; x < numObj; x++){
+			for(int y = x+1; y < numObj; y++){
+				dist = distance(myObjs[x].BB.center, myObjs[y].BB.center);
+				if(dist<=(float(myObjs[x].BB.width+ myObjs[y].BB.width))){
+					printf("COLLISION with %s and %s -- %f\n", myObjs[x].name.c_str(), myObjs[y].name.c_str(), dist );
+					if(myObjs[x].BB.width > myObjs[y].BB.width){
+						//myObjs[x].BB is larger and will become the parent
+						//but first we have to make sure the smaller obj doesn't already have a parent
+					}
+					else{
+						//myObjs[y].BB is larger and will become the parent
+						//but first we have to make sure the smaller obj doesn't already have a parent
+					}
+				}
+			}
+		}
+		//update parents/children
+		updatePly();
+		draw();
+	}
+
+	float distance(Vec3 a, Vec3 b){
+		return sqrt(	( abs(a[0]-b[0]) ) *( abs(a[0]-b[0]) )+
+				( abs(a[1]-b[1]) ) *( abs(a[1]-b[1]) )+
+				( abs(a[2]-b[2]) ) *( abs(a[2]-b[2]) ));
+	}
+
+	void testPar(){
+		//myObjs[1].addChild(&myObjs[2]);
+	}
+
+	void translate(sceneObj *s){
+		s->FL->translate(0.1,0,0);
+		for(int n = 0; n < s->numChildren; n++){
+			s->children[n]->FL->translate(0.1,0,0);
+		}
+	}
+
+}sceneGraphd;
 
 typedef struct hit{
   double t;
@@ -277,10 +333,8 @@ private:
   triangle tri4;
 	square mySquare[5];
 	triangle myTri[4];
-	FaceList* myPly[4];
-	bBox myBoxes[4];
-	sceneObj sceneGraph[5];//poop
-	SG myGraph;
+	
+	sceneGraph myGraph;
   
   float rotationDelta;
 
@@ -552,12 +606,6 @@ public:
     		myTri[0].c[2] = 1.0;
 	}
 
-	void updatePly(){
-		for(int p = 1; p<5; p++){
-			calcRitterBoundingSphere(sceneGraph[p].FL->center, &(sceneGraph[p].FL->radius), sceneGraph[p].FL);//poop
-		}
-	}
-
  
   bool begin( ){
     msglError( );
@@ -567,29 +615,9 @@ public:
     initEyePosition( );
     initUpVector( );
     initRotationDelta( );
+	myGraph.init();
 
-	myPly[0] = readPlyModel("ply/trico.ply");
-	//myPly[0]->translate(-2.0, 0.0, 2.0);
-	myPly[0]->scale(2);
-	calcRitterBoundingSphere(myPly[0]->center, &(myPly[0]->radius), myPly[0]);
-	myPly[1] = readPlyModel("ply/spider.ply");
-	myPly[1]->translate(2.0, 0.0, 2.0);
-	myPly[2] = readPlyModel("ply/shark.ply");
-	myPly[2]->translate(2.0, 4.0, 2.0);
-	myPly[3] = readPlyModel("ply/urn.ply");
-	myPly[3]->translate(-2.0, 4.0, 2.0);
-	std::string myNames[5]={"World", "Trico", "Spider", "Shark", "Urn"};
-	for(int i = 0; i < 4; i++){
-		calcRitterBoundingSphere(myPly[i]->center, &(myPly[i]->radius), myPly[i]);
-		myBoxes[i].update(Vec3(myPly[i]->center[0], myPly[i]->center[1], myPly[i]->center[2]), myPly[i]->radius);
-	}
-	//poop
-	sceneGraph[0].init("World", myBoxes[0], NULL);	//scene object that represents the world
-	for(int n = 1; n < 5; n++){
-		sceneGraph[n].init(myNames[n], myBoxes[n-1], myPly[n-1]);
-		sceneGraph[0].addChild(&sceneGraph[n]);
-		sceneGraph[n].addParent(&sceneGraph[0]);
-	}
+	
 
 
     // Load the shader program
@@ -734,29 +762,29 @@ public:
     glUniform4fv(uLight0_color, 1, light0_specular); 
     glUniform4fv(uLight1_position, 1, light1); 
     glUniform4fv(uLight1_color, 1, white_light); 
-
-	updatePly();
-
-	if(isKeyPressed('1')){
-		for(int p = 1; p <5; p++){
-			sceneGraph[p].FL->draw();
-			sceneGraph[p].BB.update(Vec3(sceneGraph[p].FL->center[0], sceneGraph[p].FL->center[1],sceneGraph[p].FL->center[2]), sceneGraph[p].FL->radius);
-			sceneGraph[p].BB.drawBB();
-			if(isKeyPressed('2')){
-				sceneGraph[1].FL->translate(-0.1, 0, 0);
-			}
-			if(isKeyPressed('3')){
-				if(abs(dot(sceneGraph[p].BB.frontNorm(),normalize(Vec3(sceneGraph[p].FL->center[0], sceneGraph[p].FL->center[1], sceneGraph[p].FL->center[2])-eyePosition)))==1){
+	//printf("ONE!\n");
+	myGraph.updatePly();
+	//printf("TWO!\n");
+	//if(isKeyPressed('1')){
+		myGraph.update();
+		if(isKeyPressed('2')){
+			myGraph.testPar();
+			myGraph.translate(&myGraph.myObjs[1]);
+		}
+		if(isKeyPressed('3')){
+			for(int p = 1; p < numObj; p++){
+				if(abs(dot(myGraph.myObjs[p].BB.frontNorm(),normalize(Vec3(myGraph.myObjs[p].FL->center[0], myGraph.myObjs[p].FL->center[1], myGraph.myObjs[p].FL->center[2])-eyePosition)))==1){
 					fprintf(stderr, "GOOD! %d\n", p);
 					//awesome, every box is axis aligned
 				}
 				else{
 					fprintf(stderr, "BAD! %d\n", p);//%f\n", dot(myBoxes[0].frontNorm(),normalize(eyePosition)));
 					//no bueno, box is not axis aligned.
-				}	
-			}
+				}
+			}	
 		}
-	}
+		
+	//}
     glUniform4fv(uAmbient, 1, medium); 
     glUniform4fv(uDiffuse, 1, medium); 
     glUniform4fv(uSpecular, 1, one); 
