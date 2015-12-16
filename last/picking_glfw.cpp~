@@ -23,6 +23,9 @@
 #include "transformations.h"
 #include "PlyModel.h"
 #include "glut_teapot.h"
+#include "binary-search-tree/Tree.h"
+
+const int numObj = 5;
 
 void msglVersion(void){
   fprintf(stderr, "OpenGL Version Information:\n");
@@ -67,6 +70,187 @@ typedef struct square{
   Vec3 d;
 }square3d;
 
+typedef struct bBox{
+	Vec3 center;
+	float width;
+	Vec4 vertices[8];
+	
+	void align(){
+		//
+	}
+
+	Vec3 frontNorm(){
+		Vec3 edge1, edge2;
+		edge1 = Vec3(vertices[4][0],vertices[4][1],vertices[4][2])-Vec3(vertices[7][0],vertices[7][1],vertices[7][2]);
+		edge2 = Vec3(vertices[6][0],vertices[6][1],vertices[6][2])-Vec3(vertices[7][0],vertices[7][1],vertices[7][2]);
+		//Vec3 temp = normalize(cross(edge1,edge2));
+		//fprintf( stderr, "Cross: %f, %f, %f\n", temp[0], temp[1], temp[2]);
+		return normalize(cross(edge1,edge2));
+	}
+
+	Vec3 topNorm(){
+		Vec3 edge1, edge2;
+		edge1 = Vec3(vertices[2][0],vertices[2][1],vertices[2][2])-Vec3(vertices[7][0],vertices[7][1],vertices[7][2]);
+		edge2 = Vec3(vertices[3][0],vertices[3][1],vertices[3][2])-Vec3(vertices[7][0],vertices[7][1],vertices[7][2]);
+		//Vec3 temp = cross(edge1,edge2);
+		//fprintf( stderr, "Cross: %f, %f, %f\n", temp[0], temp[1], temp[2]);
+		return normalize(cross(edge1,edge2));
+	}
+
+	Vec4 translate4(Vec4 myVec, float x, float y, float z, float w){
+			myVec[0]+=x;
+			myVec[1]+=y;
+			myVec[2]+=z;
+			myVec[3]+=w;
+		return myVec;
+	}
+
+	Vec4 scale4(Vec4 myVec, float s){
+			myVec[0] *= s;
+			myVec[1] *= s;
+			myVec[2] *= s;
+			myVec[3] *= s;
+		return myVec;
+	}
+
+	void update(Vec3 c, float w){
+		center = c;
+		width = w;
+	}
+
+	void drawBB(){//Vec3 center, float width){
+		vertices[0] = Vec4(	-0.5,	-0.5,	-0.5,	1.0);
+		vertices[1] = Vec4(	0.5,	-0.5,	-0.5,	1.0);
+		vertices[2] = Vec4(	0.5,	0.5,	-0.5,	1.0);
+		vertices[3] = Vec4(	-0.5,	0.5,	-0.5,	1.0);
+		vertices[4] = Vec4(	-0.5,	-0.5,	0.5,	1.0);
+		vertices[5] = Vec4(	0.5,	-0.5,	0.5,	1.0);
+		vertices[6] = Vec4(	0.5,	0.5,	0.5,	1.0);
+		vertices[7] = Vec4(	-0.5,	0.5,	0.5,	1.0);
+		for(int i = 0; i<8; i++){
+			vertices[i] = scale4(vertices[i], width*2);
+		}
+		for(int i = 0; i<8; i++){
+			vertices[i] = translate4(vertices[i], center[0], center[1], center[2], 1);
+		}
+		glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		glBegin(GL_QUADS);      // draw a cube with 6 quads
+    		glVertex3fv(vertices[0]);	//back
+    		glVertex3fv(vertices[1]);
+   		glVertex3fv(vertices[2]);
+    		glVertex3fv(vertices[3]);
+
+    		glVertex3fv(vertices[0]);	//left
+    		glVertex3fv(vertices[3]);
+    		glVertex3fv(vertices[7]);
+    		glVertex3fv(vertices[4]);
+
+    		glVertex3fv(vertices[1]);	//right
+    		glVertex3fv(vertices[5]);
+    		glVertex3fv(vertices[6]);
+    		glVertex3fv(vertices[2]);
+
+    		glVertex3fv(vertices[2]);	//top
+    		glVertex3fv(vertices[3]);
+    		glVertex3fv(vertices[7]);
+    		glVertex3fv(vertices[6]);
+
+		glVertex3fv(vertices[1]);	//bottom
+    		glVertex3fv(vertices[0]);
+    		glVertex3fv(vertices[4]);
+    		glVertex3fv(vertices[5]);
+
+		glVertex3fv(vertices[4]);	//front
+    		glVertex3fv(vertices[7]);
+    		glVertex3fv(vertices[6]);
+    		glVertex3fv(vertices[5]);
+
+		glEnd();
+		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+	}
+}bBoxd;
+
+typedef struct sceneObj{
+	//basic data structure to act as objects in scene graph
+	public:
+	std::string name;
+	sceneObj *parent;
+	sceneObj *children[5];
+	int numChildren;
+	bBox BB;
+	FaceList *FL = readPlyModel("ply/trico.ply");
+
+	void init(std::string n, bBox bb, FaceList *fl){
+		name = n;
+		parent = NULL;
+		numChildren = 0;
+		BB = bb;
+		FL = fl;
+	}
+
+	void addParent(sceneObj *p){
+		parent = p;
+	}
+
+	void addChild(sceneObj *c){
+		children[numChildren] = c;
+		numChildren++;
+	}
+
+	void removeChild(sceneObj *c){
+		children[numChildren] = NULL;
+		numChildren--;
+	}
+
+	bool isRoot(){
+		return (parent==NULL);
+	}
+	
+	bool isLeaf(){
+		return (numChildren==0);
+	}
+	
+}sceneObjd;
+
+typedef struct SG{
+	//come back
+	//basic data structure to act as scene graph
+	sceneObj *root;
+	sceneObj myObjs[numObj];
+
+
+	void init(){
+		myObjs[1].FL = readPlyModel("ply/trico.ply");
+		//myPly[0]->translate(-2.0, 0.0, 2.0);
+		myObjs[1].FL->scale(2);
+		//calcRitterBoundingSphere(myPly[0]->center, &(myPly[0]->radius), myPly[0]);
+		myObjs[2].FL = readPlyModel("ply/spider.ply");
+		myObjs[2].FL->translate(2.0, 0.0, 2.0);
+		myObjs[3].FL = readPlyModel("ply/shark.ply");
+		myObjs[3].FL->translate(2.0, 4.0, 2.0);
+		myObjs[4].FL = readPlyModel("ply/urn.ply");
+		myObjs[4].FL->translate(-2.0, 4.0, 2.0);
+		std::string myNames[5]={"World", "Trico", "Spider", "Shark", "Urn"};
+		for(int i = 0; i < 4; i++){
+			calcRitterBoundingSphere(myObjs[i].FL->center, &(myObjs[i].FL->radius), myObjs[i].FL);
+			myObjs[i].BB.update(Vec3(myObjs[i].FL->center[0], myObjs[i].FL->center[1], myObjs[i].FL->center[2]), myObjs[i].FL->radius);
+		}
+		
+		myObjs[0].init("World", myObjs[0].BB, NULL);	//scene object that represents the world
+		for(int n = 1; n < 5; n++){
+			myObjs[n].init(myNames[n], myObjs[n-1].BB, myObjs[n-1].FL);
+			myObjs[0].addChild(&myObjs[n]);
+			myObjs[n].addParent(&myObjs[0]);
+		}
+	}
+
+	void updatePly(){
+		for(int p = 1; p<numObj; p++){
+			calcRitterBoundingSphere(myObjs[p].FL->center, &(myObjs[p].FL->radius), myObjs[p].FL);
+		}
+	}
+
+}SGd;
 
 typedef struct hit{
   double t;
@@ -87,13 +271,16 @@ bool rayTriangleIntersectiond(hit& h, ray& r, triangle& t){
 
 class PickingApp : public GLFWApp{
 private:
-	FaceList* myPly[4];
+	
   triangle tri;
-  triangle tri2;
   triangle tri3;
   triangle tri4;
 	square mySquare[5];
 	triangle myTri[4];
+	FaceList* myPly[4];
+	bBox myBoxes[4];
+	sceneObj sceneGraph[5];//poop
+	SG myGraph;
   
   float rotationDelta;
 
@@ -178,7 +365,7 @@ public:
 		for(int i = 0; i<8; i++){
 			vertices[i] = translate4(vertices[i], center[0], center[1], center[2], 1);
 		}
-
+		glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 		glBegin(GL_QUADS);      // draw a cube with 6 quads
     		glVertex3fv(vertices[0]);    //back
     		glVertex3fv(vertices[1]);
@@ -211,89 +398,9 @@ public:
     		glVertex3fv(vertices[5]);
 
 		glEnd();
-		
+		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 	}
 
-	/*void draw_bbox(FaceList fl) {
-	  if (fl.vc == 0)
-	    return;
-
-	  // Cube 1x1x1, centered on origin
-	  GLfloat vertices[] = {
-	    -0.5, -0.5, -0.5, 1.0,
-	     0.5, -0.5, -0.5, 1.0,
-	     0.5,  0.5, -0.5, 1.0,
-	    -0.5,  0.5, -0.5, 1.0,
-	    -0.5, -0.5,  0.5, 1.0,
-	     0.5, -0.5,  0.5, 1.0,
-	     0.5,  0.5,  0.5, 1.0,
-	    -0.5,  0.5,  0.5, 1.0,
-	  };
-	  GLuint vbo_vertices;
-	  glGenBuffers(1, &vbo_vertices);
-	  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-	  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	  GLushort elements[] = {
-	    0, 1, 2, 3,
-	    4, 5, 6, 7,
-	    0, 4, 1, 5,
-	    2, 6, 3, 7
-	  };
-	  GLuint ibo_elements;
-	  glGenBuffers(1, &ibo_elements);
-	  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-	  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-	  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-	  GLfloat
-	    min_x, max_x,
-	    min_y, max_y,
-	    min_z, max_z;
-	  min_x = max_x = fl.vertices[0][0];
-	  min_y = max_y = fl.vertices[0][1];
-	  min_z = max_z = fl.vertices[0][2];
-	  for (int i = 0; i < fl.vc; i++) {
-	    if (fl.vertices[i][0] < min_x) min_x = fl.vertices[i][0];
-	    if (fl.vertices[i][0] > max_x) max_x = fl.vertices[i][0];
-	    if (fl.vertices[i][1] < min_y) min_y = fl.vertices[i][1];
-	    if (fl.vertices[i][1] > max_y) max_y = fl.vertices[i][1];
-	    if (fl.vertices[i][2] < min_z) min_z = fl.vertices[i][2];
-	    if (fl.vertices[i][2] > max_z) max_z = fl.vertices[i][2];
-	  }
-	  Vec3 size = Vec3(max_x-min_x, max_y-min_y, max_z-min_z);
-	  Vec3 center = Vec3((min_x+max_x)/2, (min_y+max_y)/2, (min_z+max_z)/2);
-	  Vat4 transform =  translate(Mat4(1), center)* scale(Mat4(1), size);
-
-	  // Apply object's transformation matrix 
-	  //Mat4 m = fl->object2world * transform;
-	  glUniformMatrix4fv(uniform_m, 1, GL_FALSE, value_ptr(m));
-
-	  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-	  glEnableVertexAttribArray(attribute_v_coord);
-	  glVertexAttribPointer(
-	    attribute_v_coord,  // attribute
-	    4,                  // number of elements per vertex, here (x,y,z,w)
-	    GL_FLOAT,           // the type of each element
-	    GL_FALSE,           // take our values as-is
-	    0,                  // no extra data between each position
-	    0                   // offset of first element
-	  );
-
-	  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
-	  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
-	  glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
-	  glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
-	  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	  glDisableVertexAttribArray(attribute_v_coord);
-	  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	  glDeleteBuffers(1, &vbo_vertices);
-	  glDeleteBuffers(1, &ibo_elements);
-	}*/
 
 	void drawSphere(float radius, int slices, int stacks){
 		GLUquadricObj *quadObj;
@@ -446,8 +553,8 @@ public:
 	}
 
 	void updatePly(){
-		for(int p = 0; p<4; p++){
-			calcRitterBoundingSphere(myPly[p]->center, &(myPly[p]->radius), myPly[p]);
+		for(int p = 1; p<5; p++){
+			calcRitterBoundingSphere(sceneGraph[p].FL->center, &(sceneGraph[p].FL->radius), sceneGraph[p].FL);//poop
 		}
 	}
 
@@ -471,6 +578,19 @@ public:
 	myPly[2]->translate(2.0, 4.0, 2.0);
 	myPly[3] = readPlyModel("ply/urn.ply");
 	myPly[3]->translate(-2.0, 4.0, 2.0);
+	std::string myNames[5]={"World", "Trico", "Spider", "Shark", "Urn"};
+	for(int i = 0; i < 4; i++){
+		calcRitterBoundingSphere(myPly[i]->center, &(myPly[i]->radius), myPly[i]);
+		myBoxes[i].update(Vec3(myPly[i]->center[0], myPly[i]->center[1], myPly[i]->center[2]), myPly[i]->radius);
+	}
+	//poop
+	sceneGraph[0].init("World", myBoxes[0], NULL);	//scene object that represents the world
+	for(int n = 1; n < 5; n++){
+		sceneGraph[n].init(myNames[n], myBoxes[n-1], myPly[n-1]);
+		sceneGraph[0].addChild(&sceneGraph[n]);
+		sceneGraph[n].addParent(&sceneGraph[0]);
+	}
+
 
     // Load the shader program
     const char* vertexShaderSource = "blinn_phong.vert.glsl";
@@ -573,6 +693,10 @@ public:
   
   bool render( ){
     Vec4 light0_position(10.0, 5.0, 10.0, 1.0);
+	/*fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[0][0], modelViewMatrix[0][1], modelViewMatrix[0][2], modelViewMatrix[0][3] );
+	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[1][0], modelViewMatrix[2][1], modelViewMatrix[1][2], modelViewMatrix[1][3] );
+	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2], modelViewMatrix[2][3] );
+	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[3][0], modelViewMatrix[3][1], modelViewMatrix[3][2], modelViewMatrix[3][3] );*/
     Vec4 light1_position(0.0, 14.0 ,0.0 ,1);
     const Vec4 light0_specular(0.6,0.2,0.0,1);
     const Vec4 light1_specular(0.0,0.2,0.6,1);
@@ -613,32 +737,30 @@ public:
 
 	updatePly();
 
-	Vec3 tmpCenter = centerPosition;
 	if(isKeyPressed('1')){
-		centerPosition = Vec3(1, 20, 1);
-		//drawSphere(tricoModel->radius, 32, 32);
-		for(int p = 0; p <4; p++){
-			//myPly[p]->draw();
-			drawBB(Vec3(myPly[p]->center[0], myPly[p]->center[1], myPly[p]->center[2]), myPly[p]->radius);
-			//drawSphere(myPly[0]->radius, 32, 32);
-			//tricoModel->draw( );
-			//tricoModel = readPlyModel("ply/shark.ply");
+		for(int p = 1; p <5; p++){
+			sceneGraph[p].FL->draw();
+			sceneGraph[p].BB.update(Vec3(sceneGraph[p].FL->center[0], sceneGraph[p].FL->center[1],sceneGraph[p].FL->center[2]), sceneGraph[p].FL->radius);
+			sceneGraph[p].BB.drawBB();
 			if(isKeyPressed('2')){
-				myPly[0]->translate(-0.1, 0, 0);
-				//tricoModel = readPlyModel("ply/shark.ply");
-				//tricoModel->translate();
-				//drawSphere(tricoModel->radius, 32, 32);
-				//tricoModel->translate();
+				sceneGraph[1].FL->translate(-0.1, 0, 0);
+			}
+			if(isKeyPressed('3')){
+				if(abs(dot(sceneGraph[p].BB.frontNorm(),normalize(Vec3(sceneGraph[p].FL->center[0], sceneGraph[p].FL->center[1], sceneGraph[p].FL->center[2])-eyePosition)))==1){
+					fprintf(stderr, "GOOD! %d\n", p);
+					//awesome, every box is axis aligned
+				}
+				else{
+					fprintf(stderr, "BAD! %d\n", p);//%f\n", dot(myBoxes[0].frontNorm(),normalize(eyePosition)));
+					//no bueno, box is not axis aligned.
+				}	
 			}
 		}
-		centerPosition = tmpCenter;
 	}
     glUniform4fv(uAmbient, 1, medium); 
     glUniform4fv(uDiffuse, 1, medium); 
     glUniform4fv(uSpecular, 1, one); 
     glUniform1fv(uShininess, 1, high); 
-
-//drawSphere(2, 32, 32);
 
 //skybox
 for(int x=0; x<5; x++)
@@ -665,7 +787,7 @@ glVertex3f( -100, -2, -100 );
 glEnd();
 
 //pyramid
-/*
+
 	glUniform4fv(uLight0_color, 1, purple_light);
 	for(int x=0; x<4; x++)
 	{
@@ -679,7 +801,7 @@ glEnd();
 		glColor3f(1.0f, 0.0f, 0.0f);
 			glEnd( ); 
 	}
-*/   
+  
 /////////////////////////////TRACKBALL STATE////////////////////////////
 	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	{
