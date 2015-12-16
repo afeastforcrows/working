@@ -225,7 +225,12 @@ typedef struct sceneGraph{
 	sceneObj myObjs[numObj];
 	bBox worldBB;
 
+	int showBB; //keep track of which bounding volume to show
+	bool hitFlag; //keep track of weather the pick() hit a model
+
 	void init(){
+		showBB = -1; //keep track of which bounding volume to show
+		hitFlag = false; //keep track of whether the pick() hit a model
 		myObjs[1].FL = readPlyModel("ply/trico.ply");
 		myObjs[1].FL->translate(-2.0, 0.0, 0.0);
 		myObjs[1].FL->scale(2);
@@ -261,7 +266,7 @@ typedef struct sceneGraph{
 		for(int p = 1; p <5; p++){
 			myObjs[p].FL->draw();
 			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
-			myObjs[p].BB.drawBB();
+			//myObjs[p].BB.drawBB();
 		}
 	}
 
@@ -272,7 +277,7 @@ typedef struct sceneGraph{
 			for(int y = x+1; y < numObj; y++){
 				dist = distance(myObjs[x].BB.center, myObjs[y].BB.center);
 				if(dist<=(float(myObjs[x].BB.width+ myObjs[y].BB.width))){
-					printf("COLLISION with %s and %s -- %f\n", myObjs[x].name.c_str(), myObjs[y].name.c_str(), dist );
+					//printf("COLLISION with %s and %s -- %f\n", myObjs[x].name.c_str(), myObjs[y].name.c_str(), dist );
 					if(myObjs[x].BB.width > myObjs[y].BB.width){
 						//myObjs[x].BB is larger and will become the parent
 						//but first we have to make sure the smaller obj doesn't already have a parent
@@ -617,8 +622,6 @@ public:
     initRotationDelta( );
 	myGraph.init();
 
-	
-
 
     // Load the shader program
     const char* vertexShaderSource = "blinn_phong.vert.glsl";
@@ -718,6 +721,96 @@ public:
 		fprintf( stderr, "Angle: %f\n", angle);
 		fprintf( stderr, "Axis of Rotation: (%f, %f, %f)\n", axisOfRotation[0], axisOfRotation[1], axisOfRotation[2] );*/
 	}
+
+	bool pick(int x, int y, FaceList *fl){
+		bool result = false;
+    		float center[3];
+		for(int i = 0; i < 3; i++){
+			center[i] = fl->center[i];
+		}
+		Point3 cc(center);
+		BoundingSphere boundingSphere(cc, fl->radius);
+		GLViewPort vp;
+		    /*******
+		     * With the double unproject technique
+		     */
+		    // origin at the lower left corner; flip the y
+		int flipped_y = vp.height( ) - y - 1;
+		    
+		Vec3 nearWinCoord(x, flipped_y, 0);
+		Vec3 farWinCoord(x, flipped_y, 1);
+		Vec3 nearObjCoord, farObjCoord;
+		/*int viewport[4];
+		glGetIntegerv( GL_VIEWPORT, viewport ); 
+		double mv[16], proj[16];
+		for(int i = 0; i < 4; i++){
+		      for(int j = 0; j < 4; j++){
+			mv[(i*4)+j] = modelViewMatrix(i, j);
+			proj[(i*4)+j] = projectionMatrix(i, j);
+		      }
+		    }
+		    double a, b, c, d, e, f;*/
+		    //_msUnProject(x, y, 0.0, mv, proj, viewport, &a, &b, &c);
+		if(!unproject(nearWinCoord, projectionMatrix, modelViewMatrix, vp, nearObjCoord)){
+			std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+			assert(false);
+		}
+		    //_msUnProject(x, y, 1.0, mv, proj, viewport, &d, &e, &f);
+		    if(!unproject(farWinCoord, projectionMatrix, modelViewMatrix, vp, farObjCoord)){
+		      std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+		      assert(false);
+		    }
+		    /*std::cerr << nearWinCoord << " " << nearObjCoord << " " << a << " " << b << " " << c << std::endl;
+		    std::cerr << farWinCoord << " " << farObjCoord << " " << d << " " << e << " " << f << std::endl;*/
+		    Vec3 direction1 = farObjCoord - nearObjCoord;
+		    Point3 rayOrigin1(eyePosition);
+		    Ray r1(rayOrigin1, direction1);
+		    if( boundingSphere.intersectWith(r1) ){
+		      //std::cerr << "Intersection" << std::endl;
+			result = true;
+		    }else{
+		      //std::cerr << "No intersection" << std::endl;
+		    }
+		    /*
+		     * End double unproject technique
+		     ******/
+		    
+		    /******
+		     * Ray in eye coordinates
+		     */
+		    int window_y = (vp.height( ) - y) - vp.height( )/2;
+		    double norm_y = double(window_y)/double(vp.height( )/2);
+		    int window_x = x - vp.width( )/2;
+		    double norm_x = double(window_x)/double(vp.width( )/2);
+		    double near_height = atan(degreesToRadians(25.0));
+		    float _y = near_height * norm_y;
+		    float _x = near_height * vp.aspect( ) * norm_x;
+		    
+		    Mat4 modelViewInverse = modelViewMatrix.inverse( );
+		    Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		    // near distance (3rd param) is from the perspective call,
+		    // it should really come from a camera object.
+		    Vec4 ray_direction(_x, _y, -1.f, 0.f);
+		    ray_origin = modelViewInverse * ray_origin;
+		    ray_direction = modelViewInverse * ray_direction;
+		    
+		    //std::cerr << ray_origin << std::endl;
+		    //std::cerr << ray_direction << std::endl;
+		    Point3 rayOrigin2 = Point3(ray_origin);
+		    Vec3 direction2 = ray_direction.xyz( );
+		    Ray r2(rayOrigin2, direction2);
+		    //std::cerr << r2 << std::endl;
+		    if( boundingSphere.intersectWith(r2) ){
+		      //std::cerr << "Intersection again" << std::endl;
+		    }else{
+		      //std::cerr << "No intersection again" << std::endl;
+		    }
+		    
+		   /*
+		    * End ray in eye coordinates
+		    ******/
+		return result;
+  }
   
   bool render( ){
     Vec4 light0_position(10.0, 5.0, 10.0, 1.0);
@@ -783,8 +876,11 @@ public:
 				}
 			}	
 		}
-		
+	if(myGraph.showBB>=0){
+		myGraph.myObjs[myGraph.showBB].BB.drawBB(); //render the bounding box of the model hit by pick()
+	}	
 	//}
+	
     glUniform4fv(uAmbient, 1, medium); 
     glUniform4fv(uDiffuse, 1, medium); 
     glUniform4fv(uSpecular, 1, one); 
@@ -829,7 +925,7 @@ glEnd();
 		glColor3f(1.0f, 0.0f, 0.0f);
 			glEnd( ); 
 	}
-  
+
 /////////////////////////////TRACKBALL STATE////////////////////////////
 	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	{
@@ -865,7 +961,7 @@ glEnd();
     		}
 	}
 		
-
+	
     if(isKeyPressed('Q')){
       end( );      
     }else if(isKeyPressed(GLFW_KEY_EQUAL)){
@@ -899,9 +995,24 @@ glEnd();
       rotateCameraUp(rotationDelta, eyePosition,
                      centerPosition, upVector);
     }
-    return !msglError( );
-  }
-   
+	if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){
+		//printf("mouse left button\n");
+		Vec2 mousePosition = mouseCurrentPosition( );
+		//std::cout << "Mouse position: " << mousePosition << std::endl;
+		for(int x=1; x<numObj; x++){
+			if(pick(mousePosition[0], mousePosition[1], myGraph.myObjs[x].FL)){
+				printf("Intersect with %s!\n", myGraph.myObjs[x].name.c_str());
+				myGraph.showBB = x;
+				break;
+			}
+			else{
+				myGraph.showBB = -1;
+			}
+		}
+	}
+
+	return !msglError( );
+   }
 };
 
 
