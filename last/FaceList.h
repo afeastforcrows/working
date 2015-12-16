@@ -120,22 +120,23 @@ public:
     msFree2D( faces, fc, 3 );
   };
 
-	void translate(){
-		Vec3 test;
-		Mat3 translate(	1,	0,	0.1,
-				0,	1,	0,
-				0,	0,	1);
-		for(int i = 0; i < fc; i++ ){
-			
-			test = Vec3(vertices[i][0], vertices[i][1], vertices[i][2]);
-			//test = translate*test;
-			//vertices[i][0] = double(test[0]);
-			//vertices[i][1] = double(test[1]);
-			//vertices[i][2] = double(test[2]);
+	void translate(float x, float y, float z){
+		for(int i = 0; i < vc; i++ ){
+			vertices[i][0]+=x;
+			vertices[i][1]+=y;
+			vertices[i][2]+=z;
 		}
 	}
 
-  void draw( ){		
+	void scale(float s){
+		for(int i = 0; i < vc; i++ ){
+			vertices[i][0]*=s;
+			vertices[i][1]*=s;
+			vertices[i][2]*=s;
+		}
+	}
+
+  void draw( ){	
     glBegin(GL_TRIANGLES);
     for(int i = 0; i < fc; i++ ){	
       for(int j = 0; j < 3; j++){
