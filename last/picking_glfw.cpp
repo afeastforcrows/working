@@ -263,6 +263,7 @@ typedef struct sceneGraph{
 	}
 
 	void draw(){
+		glLineWidth(2.5);
 		for(int p = 1; p <5; p++){
 			myObjs[p].FL->draw();
 			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
@@ -787,12 +788,16 @@ public:
 		    float _x = near_height * vp.aspect( ) * norm_x;
 		    
 		    Mat4 modelViewInverse = modelViewMatrix.inverse( );
-		    Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		    //Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+			Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
 		    // near distance (3rd param) is from the perspective call,
 		    // it should really come from a camera object.
 		    Vec4 ray_direction(_x, _y, -1.f, 0.f);
+			//Vec4 ray_direction(1, 1, -1.f, 0.f);
 		    ray_origin = modelViewInverse * ray_origin;
 		    ray_direction = modelViewInverse * ray_direction;
+			Vec4 p1 = modelViewInverse * Vec4(1,1,0,0);
+			Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
 		    
 		    //std::cerr << ray_origin << std::endl;
 		    //std::cerr << ray_direction << std::endl;
@@ -802,6 +807,12 @@ public:
 		    //std::cerr << r2 << std::endl;
 		    if( boundingSphere.intersectWith(r2) ){
 		      //std::cerr << "Intersection again" << std::endl;
+			glLineWidth(2.5); 
+			glColor3f(1.0, 0.0, 0.0);
+			glBegin(GL_LINES);
+			glVertex3f(p1[0], p1[1], p1[2]);
+			glVertex3f(p2[0], p2[1], p2[2]);
+			glEnd();
 		    }else{
 		      //std::cerr << "No intersection again" << std::endl;
 		    }
@@ -810,6 +821,73 @@ public:
 		    * End ray in eye coordinates
 		    ******/
 		return result;
+  }
+
+	void drawFrustum(int x, int y, Vec3 center){
+		GLViewPort vp;
+		    /*******
+		     * With the double unproject technique
+		     */
+		    // origin at the lower left corner; flip the y
+		int flipped_y = vp.height( ) - y - 1;
+		    
+		Vec3 nearWinCoord(x, flipped_y, 0);
+		Vec3 farWinCoord(x, flipped_y, 1);
+		Vec3 nearObjCoord, farObjCoord;
+
+		    //_msUnProject(x, y, 0.0, mv, proj, viewport, &a, &b, &c);
+		if(!unproject(nearWinCoord, projectionMatrix, modelViewMatrix, vp, nearObjCoord)){
+			std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+			assert(false);
+		}
+		    //_msUnProject(x, y, 1.0, mv, proj, viewport, &d, &e, &f);
+		    if(!unproject(farWinCoord, projectionMatrix, modelViewMatrix, vp, farObjCoord)){
+		      std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+		      assert(false);
+		    }
+		    Vec3 direction1 = farObjCoord - nearObjCoord;
+		    Point3 rayOrigin1(eyePosition);
+		    Ray r1(rayOrigin1, direction1);
+		    /*	End double unproject technique
+
+		      	Ray in eye coordinates		*/
+		     
+		    int window_y = (vp.height( ) - y) - vp.height( )/2;
+		    double norm_y = double(window_y)/double(vp.height( )/2);
+		    int window_x = x - vp.width( )/2;
+		    double norm_x = double(window_x)/double(vp.width( )/2);
+		    double near_height = atan(degreesToRadians(25.0));
+		    float _y = near_height * norm_y;
+		    float _x = near_height * vp.aspect( ) * norm_x;
+		    
+		    Mat4 modelViewInverse = modelViewMatrix.inverse( );
+		    //Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+			Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		    // near distance (3rd param) is from the perspective call,
+		    // it should really come from a camera object.
+		    Vec4 ray_direction(_x, _y, -1.f, 0.f);
+			//Vec4 ray_direction(1, 1, -1.f, 0.f);
+		    ray_origin = modelViewInverse * ray_origin;
+		    ray_direction = modelViewInverse * ray_direction;
+			Vec4 p1 = modelViewInverse * Vec4(6,6,0,0);
+			Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
+		    
+		    //std::cerr << ray_origin << std::endl;
+		    //std::cerr << ray_direction << std::endl;
+		    Point3 rayOrigin2 = Point3(ray_origin);
+		    Vec3 direction2 = ray_direction.xyz( );
+		    Ray r2(rayOrigin2, direction2);
+
+			glLineWidth(5); 
+			glColor3f(1.0, 0.0, 0.0);
+			glBegin(GL_LINES);
+			glVertex3f(p1[0], p1[1], p1[2]);
+			glVertex3f(p2[0], p2[1], p2[2]);
+			glEnd();
+		    //std::cerr << r2 << std::endl;		    
+		   /*
+		    * End ray in eye coordinates
+		    ******/
   }
   
   bool render( ){
@@ -837,8 +915,9 @@ public:
 
     Vec2i w = windowSize( );
     double ratio = double(w[0]) / double(w[1]);
-
+	//Vec3 frustum[8];
     projectionMatrix = perspective(90.0, ratio, 1.0, 50.0);
+	
     modelViewMatrix = lookat(eyePosition, centerPosition, upVector);
     normalMatrix = modelViewMatrix.inverse().transpose( );
 
@@ -926,6 +1005,9 @@ glEnd();
 			glEnd( ); 
 	}
 
+
+	drawFrustum(0, 0, Vec3(0,0,0));
+
 /////////////////////////////TRACKBALL STATE////////////////////////////
 	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	{
@@ -946,18 +1028,31 @@ glEnd();
 			// Get the view vector
 			Vec3 vVector = centerPosition - eyePosition;
 	
-			centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
-			centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
+			//centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
+			//centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
+
+			Mat3 zMat3(	cos(angle_z),	sin(angle_z),	0,	
+					-sin(angle_z),	cos(angle_z),	0,	
+					0,		0,		1);
+			eyePosition = zMat3 * eyePosition;
+			centerPosition = zMat3 * centerPosition;
+			upVector = zMat3 * upVector;
 
 			Mat3 yMat3(	cos(angle_z),	0,	sin(angle_z),	
 					0,		1,	0,	
 					-sin(angle_z),	0,	cos(angle_z));
+			eyePosition = yMat3 * eyePosition;
 			centerPosition = yMat3 * centerPosition;
+			upVector = yMat3 * upVector;
 
 			Mat3 xMat3(	1,	0,		0,
 					0,	cos(-angle_z),	-sin(-angle_z),
 					0,	sin(-angle_z),	cos(-angle_z));
-			upVector = xMat3 * upVector;			
+			eyePosition = xMat3 * eyePosition;
+			centerPosition = xMat3 * centerPosition;
+			upVector = xMat3 * upVector;
+
+			modelViewMatrix = lookat(eyePosition, centerPosition, upVector);			
     		}
 	}
 		
