@@ -19,7 +19,7 @@
 #include "GFXMath.h"
 #include "GFXExtra.h"
 
-#include "GLSLShader.h"
+#include "GLSLShader.h" 
 #include "transformations.h"
 #include "PlyModel.h"
 #include "glut_teapot.h"
@@ -127,6 +127,7 @@ typedef struct bBox{
 		vertices[5] = Vec4(	0.5,	-0.5,	0.5,	1.0);
 		vertices[6] = Vec4(	0.5,	0.5,	0.5,	1.0);
 		vertices[7] = Vec4(	-0.5,	0.5,	0.5,	1.0);
+		glLineWidth(2.5);
 		for(int i = 0; i<8; i++){
 			vertices[i] = scale4(vertices[i], width*2);
 		}
@@ -226,15 +227,17 @@ typedef struct sceneGraph{
 	bBox worldBB;
 
 	int showBB; //keep track of which bounding volume to show
+	bool boolBB; //A switch used when toggling bounding volumes on/off
 	bool hitFlag; //keep track of weather the pick() hit a model
 
 	void init(){
 		showBB = -1; //keep track of which bounding volume to show
+		boolBB = true;
 		hitFlag = false; //keep track of whether the pick() hit a model
 		myObjs[1].FL = readPlyModel("ply/trico.ply");
 		myObjs[1].FL->translate(-2.0, 0.0, 0.0);
 		myObjs[1].FL->scale(2);
-		//calcRitterBoundingSphere(myPly[0]->center, &(myPly[0]->radius), myPly[0]);
+		//calcRitterBoundingSphere(myObjs[0]->center, &(myObjs[0]->radius), myObjs[0]);
 		myObjs[2].FL = readPlyModel("ply/spider.ply");
 		myObjs[2].FL->translate(2.0, 0.0, 2.0);
 		myObjs[3].FL = readPlyModel("ply/shark.ply");
@@ -263,7 +266,6 @@ typedef struct sceneGraph{
 	}
 
 	void draw(){
-		glLineWidth(2.5);
 		for(int p = 1; p <5; p++){
 			myObjs[p].FL->draw();
 			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
@@ -788,16 +790,12 @@ public:
 		    float _x = near_height * vp.aspect( ) * norm_x;
 		    
 		    Mat4 modelViewInverse = modelViewMatrix.inverse( );
-		    //Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
-			Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		    Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
 		    // near distance (3rd param) is from the perspective call,
 		    // it should really come from a camera object.
 		    Vec4 ray_direction(_x, _y, -1.f, 0.f);
-			//Vec4 ray_direction(1, 1, -1.f, 0.f);
 		    ray_origin = modelViewInverse * ray_origin;
 		    ray_direction = modelViewInverse * ray_direction;
-			Vec4 p1 = modelViewInverse * Vec4(1,1,0,0);
-			Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
 		    
 		    //std::cerr << ray_origin << std::endl;
 		    //std::cerr << ray_direction << std::endl;
@@ -807,12 +805,6 @@ public:
 		    //std::cerr << r2 << std::endl;
 		    if( boundingSphere.intersectWith(r2) ){
 		      //std::cerr << "Intersection again" << std::endl;
-			glLineWidth(2.5); 
-			glColor3f(1.0, 0.0, 0.0);
-			glBegin(GL_LINES);
-			glVertex3f(p1[0], p1[1], p1[2]);
-			glVertex3f(p2[0], p2[1], p2[2]);
-			glEnd();
 		    }else{
 		      //std::cerr << "No intersection again" << std::endl;
 		    }
@@ -821,73 +813,6 @@ public:
 		    * End ray in eye coordinates
 		    ******/
 		return result;
-  }
-
-	void drawFrustum(int x, int y, Vec3 center){
-		GLViewPort vp;
-		    /*******
-		     * With the double unproject technique
-		     */
-		    // origin at the lower left corner; flip the y
-		int flipped_y = vp.height( ) - y - 1;
-		    
-		Vec3 nearWinCoord(x, flipped_y, 0);
-		Vec3 farWinCoord(x, flipped_y, 1);
-		Vec3 nearObjCoord, farObjCoord;
-
-		    //_msUnProject(x, y, 0.0, mv, proj, viewport, &a, &b, &c);
-		if(!unproject(nearWinCoord, projectionMatrix, modelViewMatrix, vp, nearObjCoord)){
-			std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
-			assert(false);
-		}
-		    //_msUnProject(x, y, 1.0, mv, proj, viewport, &d, &e, &f);
-		    if(!unproject(farWinCoord, projectionMatrix, modelViewMatrix, vp, farObjCoord)){
-		      std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
-		      assert(false);
-		    }
-		    Vec3 direction1 = farObjCoord - nearObjCoord;
-		    Point3 rayOrigin1(eyePosition);
-		    Ray r1(rayOrigin1, direction1);
-		    /*	End double unproject technique
-
-		      	Ray in eye coordinates		*/
-		     
-		    int window_y = (vp.height( ) - y) - vp.height( )/2;
-		    double norm_y = double(window_y)/double(vp.height( )/2);
-		    int window_x = x - vp.width( )/2;
-		    double norm_x = double(window_x)/double(vp.width( )/2);
-		    double near_height = atan(degreesToRadians(25.0));
-		    float _y = near_height * norm_y;
-		    float _x = near_height * vp.aspect( ) * norm_x;
-		    
-		    Mat4 modelViewInverse = modelViewMatrix.inverse( );
-		    //Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
-			Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
-		    // near distance (3rd param) is from the perspective call,
-		    // it should really come from a camera object.
-		    Vec4 ray_direction(_x, _y, -1.f, 0.f);
-			//Vec4 ray_direction(1, 1, -1.f, 0.f);
-		    ray_origin = modelViewInverse * ray_origin;
-		    ray_direction = modelViewInverse * ray_direction;
-			Vec4 p1 = modelViewInverse * Vec4(6,6,0,0);
-			Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
-		    
-		    //std::cerr << ray_origin << std::endl;
-		    //std::cerr << ray_direction << std::endl;
-		    Point3 rayOrigin2 = Point3(ray_origin);
-		    Vec3 direction2 = ray_direction.xyz( );
-		    Ray r2(rayOrigin2, direction2);
-
-			glLineWidth(5); 
-			glColor3f(1.0, 0.0, 0.0);
-			glBegin(GL_LINES);
-			glVertex3f(p1[0], p1[1], p1[2]);
-			glVertex3f(p2[0], p2[1], p2[2]);
-			glEnd();
-		    //std::cerr << r2 << std::endl;		    
-		   /*
-		    * End ray in eye coordinates
-		    ******/
   }
   
   bool render( ){
@@ -915,9 +840,8 @@ public:
 
     Vec2i w = windowSize( );
     double ratio = double(w[0]) / double(w[1]);
-	//Vec3 frustum[8];
+
     projectionMatrix = perspective(90.0, ratio, 1.0, 50.0);
-	
     modelViewMatrix = lookat(eyePosition, centerPosition, upVector);
     normalMatrix = modelViewMatrix.inverse().transpose( );
 
@@ -955,7 +879,7 @@ public:
 				}
 			}	
 		}
-	if(myGraph.showBB>=0){
+	if(myGraph.showBB>=0 && myGraph.boolBB == true){
 		myGraph.myObjs[myGraph.showBB].BB.drawBB(); //render the bounding box of the model hit by pick()
 	}	
 	//}
@@ -1005,9 +929,6 @@ glEnd();
 			glEnd( ); 
 	}
 
-
-	drawFrustum(0, 0, Vec3(0,0,0));
-
 /////////////////////////////TRACKBALL STATE////////////////////////////
 	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	{
@@ -1028,37 +949,30 @@ glEnd();
 			// Get the view vector
 			Vec3 vVector = centerPosition - eyePosition;
 	
-			//centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
-			//centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
-
-			Mat3 zMat3(	cos(angle_z),	sin(angle_z),	0,	
-					-sin(angle_z),	cos(angle_z),	0,	
-					0,		0,		1);
-			eyePosition = zMat3 * eyePosition;
-			centerPosition = zMat3 * centerPosition;
-			upVector = zMat3 * upVector;
+			centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
+			centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
 
 			Mat3 yMat3(	cos(angle_z),	0,	sin(angle_z),	
 					0,		1,	0,	
 					-sin(angle_z),	0,	cos(angle_z));
-			eyePosition = yMat3 * eyePosition;
 			centerPosition = yMat3 * centerPosition;
-			upVector = yMat3 * upVector;
 
 			Mat3 xMat3(	1,	0,		0,
 					0,	cos(-angle_z),	-sin(-angle_z),
 					0,	sin(-angle_z),	cos(-angle_z));
-			eyePosition = xMat3 * eyePosition;
-			centerPosition = xMat3 * centerPosition;
-			upVector = xMat3 * upVector;
-
-			modelViewMatrix = lookat(eyePosition, centerPosition, upVector);			
+			upVector = xMat3 * upVector;			
     		}
 	}
 		
 	
     if(isKeyPressed('Q')){
-      end( );      
+      end( );   
+	}else if(isKeyPressed('H')){
+		printf( "This is a help message. More to come soon." );
+	   
+	}else if(isKeyPressed('B')){
+		myGraph.boolBB = !myGraph.boolBB;
+	  
     }else if(isKeyPressed(GLFW_KEY_EQUAL)){
       rotationDelta += 1.0;
       printf( "Rotation delta set to %g\n", rotationDelta );
@@ -1117,4 +1031,5 @@ int main(int argc, char* argv[]){
   PickingApp app(argc, argv);
   return app();
 }
+
 

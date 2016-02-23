@@ -19,7 +19,7 @@
 #include "GFXMath.h"
 #include "GFXExtra.h"
 
-#include "GLSLShader.h"
+#include "GLSLShader.h" 
 #include "transformations.h"
 #include "PlyModel.h"
 #include "glut_teapot.h"
@@ -127,6 +127,7 @@ typedef struct bBox{
 		vertices[5] = Vec4(	0.5,	-0.5,	0.5,	1.0);
 		vertices[6] = Vec4(	0.5,	0.5,	0.5,	1.0);
 		vertices[7] = Vec4(	-0.5,	0.5,	0.5,	1.0);
+		glLineWidth(2.5);
 		for(int i = 0; i<8; i++){
 			vertices[i] = scale4(vertices[i], width*2);
 		}
@@ -226,15 +227,17 @@ typedef struct sceneGraph{
 	bBox worldBB;
 
 	int showBB; //keep track of which bounding volume to show
+	bool boolBB; //A switch used when toggling bounding volumes on/off
 	bool hitFlag; //keep track of weather the pick() hit a model
 
 	void init(){
 		showBB = -1; //keep track of which bounding volume to show
+		boolBB = true;
 		hitFlag = false; //keep track of whether the pick() hit a model
 		myObjs[1].FL = readPlyModel("ply/trico.ply");
 		myObjs[1].FL->translate(-2.0, 0.0, 0.0);
 		myObjs[1].FL->scale(2);
-		//calcRitterBoundingSphere(myPly[0]->center, &(myPly[0]->radius), myPly[0]);
+		//calcRitterBoundingSphere(myObjs[0]->center, &(myObjs[0]->radius), myObjs[0]);
 		myObjs[2].FL = readPlyModel("ply/spider.ply");
 		myObjs[2].FL->translate(2.0, 0.0, 2.0);
 		myObjs[3].FL = readPlyModel("ply/shark.ply");
@@ -876,7 +879,7 @@ public:
 				}
 			}	
 		}
-	if(myGraph.showBB>=0){
+	if(myGraph.showBB>=0 && myGraph.boolBB == true){
 		myGraph.myObjs[myGraph.showBB].BB.drawBB(); //render the bounding box of the model hit by pick()
 	}	
 	//}
@@ -963,7 +966,13 @@ glEnd();
 		
 	
     if(isKeyPressed('Q')){
-      end( );      
+      end( );   
+	}else if(isKeyPressed('H')){
+		printf( "This is a help message. More to come soon." );
+	   
+	}else if(isKeyPressed('B')){
+		myGraph.boolBB = !myGraph.boolBB;
+	  
     }else if(isKeyPressed(GLFW_KEY_EQUAL)){
       rotationDelta += 1.0;
       printf( "Rotation delta set to %g\n", rotationDelta );
