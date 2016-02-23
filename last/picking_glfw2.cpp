@@ -807,12 +807,12 @@ public:
 		    //std::cerr << r2 << std::endl;
 		    if( boundingSphere.intersectWith(r2) ){
 		      //std::cerr << "Intersection again" << std::endl;
-			glLineWidth(2.5); 
-			glColor3f(1.0, 0.0, 0.0);
-			glBegin(GL_LINES);
-			glVertex3f(p1[0], p1[1], p1[2]);
-			glVertex3f(p2[0], p2[1], p2[2]);
-			glEnd();
+			//glLineWidth(2.5); 
+			//glColor3f(1.0, 0.0, 0.0);
+			//glBegin(GL_LINES);
+			//glVertex3f(p1[0], p1[1], p1[2]);
+			//glVertex3f(p2[0], p2[1], p2[2]);
+			//glEnd();
 		    }else{
 		      //std::cerr << "No intersection again" << std::endl;
 		    }
@@ -870,7 +870,7 @@ public:
 		    ray_origin = modelViewInverse * ray_origin;
 		    ray_direction = modelViewInverse * ray_direction;
 			Vec4 p1 = modelViewInverse * Vec4(6,6,0,0);
-			Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
+			Vec4 p2 = modelViewInverse * Vec4(606,606,50,0);
 		    
 		    //std::cerr << ray_origin << std::endl;
 		    //std::cerr << ray_direction << std::endl;
@@ -1009,52 +1009,57 @@ glEnd();
 	drawFrustum(0, 0, Vec3(0,0,0));
 
 /////////////////////////////TRACKBALL STATE////////////////////////////
-	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
-	{
-		Vec2 oldPosition = mousePosition;
-		mousePosition = mouseCurrentPosition( );
-		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){		
-			float angle_y  = 0.0f;				
-			float angle_z  = 0.0f;							
-			
-			//Vec3 f = normalize(-eyePosition);//gaze
-			//Vec3 _up = normalize(upVector);//up			
-			//Vec3 rVec = normalize(cross(f, _up));//right
-
-			// Get the direction from the mouse cursor
-			angle_y = (float)( (oldPosition[0] - mousePosition[0]) ) / 500;		
-			angle_z = (float)( (oldPosition[1] - mousePosition[1]) ) / 500;
-
-			// Get the view vector
-			Vec3 vVector = centerPosition - eyePosition;
-	
-			//centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
-			//centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
-
-			Mat3 zMat3(	cos(angle_z),	sin(angle_z),	0,	
-					-sin(angle_z),	cos(angle_z),	0,	
-					0,		0,		1);
-			eyePosition = zMat3 * eyePosition;
-			centerPosition = zMat3 * centerPosition;
-			upVector = zMat3 * upVector;
-
-			Mat3 yMat3(	cos(angle_z),	0,	sin(angle_z),	
-					0,		1,	0,	
-					-sin(angle_z),	0,	cos(angle_z));
-			eyePosition = yMat3 * eyePosition;
-			centerPosition = yMat3 * centerPosition;
-			upVector = yMat3 * upVector;
-
-			Mat3 xMat3(	1,	0,		0,
-					0,	cos(-angle_z),	-sin(-angle_z),
-					0,	sin(-angle_z),	cos(-angle_z));
-			eyePosition = xMat3 * eyePosition;
-			centerPosition = xMat3 * centerPosition;
-			upVector = xMat3 * upVector;
-
-			modelViewMatrix = lookat(eyePosition, centerPosition, upVector);			
-    		}
-	}
+		if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
+  	{
+ 		Vec2 oldPosition = mousePosition;
+ 		mousePosition = mouseCurrentPosition( );
+ 		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){		
+ 			float angle_y  = 0.0f;				
+ 			float angle_z  = 0.0f;	
+			float angle_x = 0.0f;						
+ 			
+ 			//Vec3 f = normalize(-eyePosition);//gaze
+ 			//Vec3 _up = normalize(upVector);//up			
+ 			//Vec3 rVec = normalize(cross(f, _up));//right
+ 
+ 			// Get the direction from the mouse cursor
+ 			angle_y = (float)( (oldPosition[0] - mousePosition[0]) ) / 500;		
+ 			angle_z = (float)( (oldPosition[1] - mousePosition[1]) ) / 500;
+			angle_x = sqrt(1-(angle_y*angle_y+angle_y*angle_y));
+ 
+  			// Get the view vector
+  			Vec3 vVector = centerPosition - eyePosition;
+  	
+ 			centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
+ 			centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
+ 			//centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
+ 			//centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
+ 
+ 			Mat3 zMat3(	cos(angle_x),	sin(angle_x),	0,	
+ 					-sin(angle_x),	cos(angle_x),	0,	
+ 					0,		0,		1);
+ 			//eyePosition = zMat3 * eyePosition;
+ 			//centerPosition = zMat3 * centerPosition;
+ 			//upVector = zMat3 * upVector;
+  
+  			Mat3 yMat3(	cos(angle_y),	0,	sin(angle_y),	
+  					0,		1,	0,	
+  					-sin(angle_y),	0,	cos(angle_y));
+ 			//eyePosition = yMat3 * eyePosition;
+  			centerPosition = yMat3 * centerPosition;
+ 			upVector = yMat3 * upVector;
+  
+  			Mat3 xMat3(	1,	0,		0,
+  					0,	cos(-angle_z),	-sin(-angle_z),
+  					0,	sin(-angle_z),	cos(-angle_z));
+ 			upVector = xMat3 * upVector;			
+ 			//eyePosition = xMat3 * eyePosition;
+ 			centerPosition = xMat3 * centerPosition;
+ 			upVector = xMat3 * upVector;
+ 
+ 			modelViewMatrix = lookat(eyePosition, centerPosition, upVector);			
+      		}
+  	}
 		
 	
     if(isKeyPressed('Q')){

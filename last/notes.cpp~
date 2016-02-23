@@ -18,4 +18,25 @@ Mat4 rMat(	u*u+(u*u + w*w)*cos(degrees),	u*v*(1-cos(degrees))-w*sin(degrees),	u*
 
 	Mat3 xMat3(	1,	0,		0,
 			0,	cos(degrees),	-sin(degrees),
-			0,	sin(degrees),	cos(degrees);
+			0,	sin(degrees),	cos(degrees));
+
+
+//centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
+			//centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
+
+			Mat3 zMat3(	cos(angle_z),	sin(angle_z),	0,	
+					-sin(angle_z),	cos(angle_z),	0,	
+					0,		0,		1);
+			eyePosition = zMat3 * eyePosition;
+			centerPosition = zMat3 * centerPosition;
+			upVector = zMat3 * upVector;
+
+			Mat3 yMat3(	cos(angle_z),	0,	sin(angle_z),	
+					0,		1,	0,	
+					-sin(angle_z),	0,	cos(angle_z));
+			centerPosition = yMat3 * centerPosition;
+
+			Mat3 xMat3(	1,	0,		0,
+					0,	cos(-angle_z),	-sin(-angle_z),
+					0,	sin(-angle_z),	cos(-angle_z));
+			upVector = xMat3 * upVector;
