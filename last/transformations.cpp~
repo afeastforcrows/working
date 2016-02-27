@@ -12,6 +12,30 @@
 
 #include "transformations.h"
 
+typedef struct quaternion{
+	float x,y,z,w;
+	
+	quaternion multi(quaternion B){
+  		quaternion C;
+
+  		C.x = w*B.x + x*B.w + y*B.z - z*B.y;
+  		C.y = w*B.y - x*B.z + y*B.w + z*B.x;
+  		C.z = w*B.z + x*B.y - y*B.x + z*B.w;
+  		C.w = w*B.w - x*B.x - y*B.y - z*B.z;
+  		return C;
+	}
+
+	quaternion conjugate(quaternion Q){
+		Q.x = -Q.x;
+  		Q.y = -Q.y;
+  		Q.z = -Q.z;
+		return Q;
+	}
+
+	
+
+}quaternion;
+
 void translate(Vec3& centerPosition, float x, float y, float z){
 	centerPosition[0]+=x;
 	centerPosition[1]+=y;
@@ -19,8 +43,34 @@ void translate(Vec3& centerPosition, float x, float y, float z){
 }
 
 void moveLeft(Vec3& centerPosition){
-	centerPosition[0] = centerPosition[0] + 0.01f;
+	if(true){	centerPosition[1] = centerPosition[1] + 0.01f; }
+	else{	centerPosition[1] = centerPosition[1] - 0.01f; }
 }
+
+void quatRotate(Vec3& centerPosition, float x, float y, float z, float w){
+	quaternion temp, quat_view, result, conjugate;
+
+	temp.x = x * sin(w/2);
+	temp.y = y * sin(w/2);
+	temp.z = z * sin(w/2);
+	temp.w = cos(w/2);
+
+	quat_view.x = centerPosition[0];
+	quat_view.y = centerPosition[1];
+	quat_view.z = centerPosition[2];
+	quat_view.w = 0;
+
+	conjugate = conjugate.conjugate(temp);
+	result = temp.multi(quat_view);
+	//printf( "my 1: (%f, %f, %f, %f) \n", result.x,result.y,result.z,result.w );
+	//printf( "my 2: (%f, %f, %f, %f) \n", conjugate.x,conjugate.y,conjugate.z,conjugate.w );
+	result = result.multi(conjugate);
+	//printf( "my 3: (%f, %f, %f, %f) \n", result.x,result.y,result.z,result.w );
+
+	centerPosition = Vec3(result.x,result.y,result.z);//result.x, result.y, result.z);
+
+}
+
 
 void rotateCameraLeft(float degrees, Vec3& eyePosition, Vec3& centerPosition, Vec3& upVector){
 	degrees /= 50;	
@@ -44,7 +94,27 @@ void rotateCameraUp(float degrees, Vec3& eyePosition, Vec3& centerPosition, Vec3
 }
 
 void arbitratyRotation(float degrees, Vec3& eyePosition, Vec3& centerPosition, Vec3& upVector, Vec3& axis){
-	normalize(axis);
+	
+	
+	
+	float x = axis[0]*sin(degrees/2);
+	float y = axis[1]*sin(degrees/2);
+	float z = axis[2]*sin(degrees/2);//sqrt(axis[0]*axis[0] + axis[1]*axis[1]);//axis[2];
+	float w = cos(degrees/2);
+
+	Mat3 quat(
+	w*w+x*x-y*y-z*z,	2*x*y-2*w*z,		2*x*z+2*w*y,
+	2*x*y+2*w*z,		w*w-x*x+y*y-z*z,	2*y*z+2*w*x,
+	2*x*z-2*w*y,		2*y*z-2*w*x,		w*w-x*x-y*y+z*z);
+	
+	/*Mat3 quat(
+	cos(y)*cos(z), 		cos(z)*sin(x)*sin(y)-cos(x)*sin(z),	cos(x)*cos(z)*sin(y)+sin(x)*sin(z),
+	cos(y)*sin(z),		cos(x)*cos(z)+sin(x)*sin(y)*sin(z),	-cos(z)*sin(x)+cos(x)*sin(y)*sin(z),
+	-sin(y),		cos(y)*sin(x),				cos(x)*cos(y)	);*/
+	centerPosition = quat * centerPosition;
+
+
+/*	normalize(axis);
 	float u = axis[0], v = axis[1], w = axis[2];	
 	//float l = u*u+v*v+ w*w;
 	float a = 0, b = 0, c = 0;
@@ -81,10 +151,10 @@ void arbitratyRotation(float degrees, Vec3& eyePosition, Vec3& centerPosition, V
 	Vec4 myUp(upVector, 0);
 	myUp = rMat * myUp;
 	upVector = Vec3(myUp[0], myUp[1], myUp[2]);
-	*/
+	///end here
 	eyePosition = rMat2 * eyePosition;
-	//centerPosition = rMat2 * centerPosition;
-	//upVector = rMat2 * upVector;
+	centerPosition = rMat2 * centerPosition;
+	upVector = rMat2 * upVector;
 
 	//Vec3 f = normalize(-eyePosition);//gaze
 	//Vec3 _up = normalize(upVector);//up
@@ -93,5 +163,5 @@ void arbitratyRotation(float degrees, Vec3& eyePosition, Vec3& centerPosition, V
  	//Mat3 m = rotate3(-degrees, axis);
   	//upVector = axis;
   	//eyePosition = m * eyePosition;
-	//eyePosition[1] += degrees;
+	//eyePosition[1] += degrees;*/
 }

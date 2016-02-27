@@ -50,6 +50,39 @@ void msglPrintMatrix16dv( char *varName, double matrix[16] ){
   }
 }
 
+typedef struct quaternion{
+	float x,y,z,w;
+	
+	quaternion mult(quaternion A, quaternion B){
+  		quaternion C;
+
+  		C.x = A.w*B.x + A.x*B.w + A.y*B.z - A.z*B.y;
+  		C.y = A.w*B.y - A.x*B.z + A.y*B.w + A.z*B.x;
+  		C.z = A.w*B.z + A.x*B.y - A.y*B.x + A.z*B.w;
+  		C.w = A.w*B.w - A.x*B.x - A.y*B.y - A.z*B.z;
+  		return C;
+	}
+
+	quaternion multi(quaternion B){
+  		quaternion C;
+
+  		C.x = w*B.x + x*B.w + y*B.z - z*B.y;
+  		C.y = w*B.y - x*B.z + y*B.w + z*B.x;
+  		C.z = w*B.z + x*B.y - y*B.x + z*B.w;
+  		C.w = w*B.w - x*B.x - y*B.y - z*B.z;
+  		return C;
+	}
+
+	void conjugate(){
+  		x = -x;
+  		y = -y;
+  		z = -z;
+	}
+
+	
+
+}quaternion;
+
 typedef struct ray{
   // origin
   Vec3 o;
@@ -379,7 +412,7 @@ public:
     GLFWApp(argc, argv, std::string("Camera Control").c_str( ), 500, 500){ }
   
   void initCenterPosition( ){
-    centerPosition = Vec3(0.0, 0.0, 0.0);
+    centerPosition = Vec3(0.0, 0.0, 1.0);
   }
   
   void initEyePosition( ){
@@ -930,18 +963,75 @@ glEnd();
 	}
 
 /////////////////////////////TRACKBALL STATE////////////////////////////
-	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
-	{
-		Vec2 oldPosition = mousePosition;
-		mousePosition = mouseCurrentPosition( );
-		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){		
-			float angle_y  = 0.0f;				
-			float angle_z  = 0.0f;							
+	if(isKeyPressed('O')){
+		moveLeft(centerPosition);
+		//moveLeft(centerPosition);
+	}
+	//if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
+	//{
+		Vec2 oldPosition = (mousePosition);
+		mousePosition = (mouseCurrentPosition( ));
+		mousePosition[0] = ((mousePosition[0]*2)/500)-1;
+		mousePosition[1] = ((mousePosition[1]*2)/500)-1;
+
+		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){	
+			printf( "Old: (%f,%f)\n", oldPosition[0],oldPosition[1] );
+			printf( "New: (%f,%f)\n", mousePosition[0],mousePosition[1] );	
+
+			Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
+			// normalize(cross(Vec3(oldPosition[0], oldPosition[1], 0), centerPosition));
+			Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
+			Vec3 axisQ = normalize(cross(startVec, endVec));
+			float angleQ = dot(startVec, endVec);
+			//printf( "Angle: %f \n", angleQ );
+			//printf( "Axis: (%f, %f, %f) \n", axisQ[0],axisQ[1],axisQ[2] );
+			//float x = oldPosition[1] - mousePosition[1];//axisQ[0];
+			//float y = oldPosition[1] - mousePosition[1];//axisQ[1];
+			//float z = axisQ[2];
+			//float w = (angleQ);
+			Vec3 right =  normalize(cross(centerPosition-eyePosition, upVector));
+			if(oldPosition[0] != mousePosition[0] && oldPosition[1] != mousePosition[1])//only proceed if there was actual movement of the mouse
+			{
+				
+				quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(mousePosition[0] - oldPosition[0]));
+				upVector = normalize(cross(right, centerPosition-eyePosition));
+				quatRotate(centerPosition, right[0],right[1],right[2],(mousePosition[1] - oldPosition[1]));
+				
+				//quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(oldPosition[0] - mousePosition[0]));
+				/*
+				if(mousePosition[0]>=oldPosition[0]){
+					printf( "Positive: %f\n", centerPosition[0] );
+					centerPosition[0]+=(mousePosition[0]-oldPosition[0]);
+				}
+				else{
+					printf( "Negative: %f\n", centerPosition[0] );
+					centerPosition[0]+=(mousePosition[0]-oldPosition[0]);
+				}
+				*/
+				//arbitratyRotation(w, eyePosition, centerPosition, upVector, axisQ);
+				//quatRotate(centerPosition, 1,0,6,(oldPosition[1] - mousePosition[1]));
+				//quatRotate(centerPosition, 0,0,7,(oldPosition[0] - mousePosition[0]));
+
+				// Rotate around the y axis
+				//RotateCamera(MouseDirection.y, Axis.x, Axis.y, Axis.z);
+				// Rotate around the x axis
+				//RotateCamera(MouseDirection.x, 0, 1, 0);
+			}
+/*
+			centerPosition[0] = temp.x;
+			centerPosition[1] = temp.y;
+			centerPosition[2] = temp.z;
+
 			
+			/*Mat3 quaternion = new Mat3(	(w*w)-(2*y*y)-(2*z*z),	(2*x*y)-(2*w*z),	2xz+2wy,		
+							2xy+2wz,	w^2-2x2-2z2,	2yz+2wx		
+							2xz-2wy,	2yz-2wx,	w^2-2x2-2y2);
+			*/
+			/*
 			//Vec3 f = normalize(-eyePosition);//gaze
 			//Vec3 _up = normalize(upVector);//up			
 			//Vec3 rVec = normalize(cross(f, _up));//right
-
+			
 			// Get the direction from the mouse cursor
 			angle_y = (float)( (oldPosition[0] - mousePosition[0]) ) / 500;		
 			angle_z = (float)( (oldPosition[1] - mousePosition[1]) ) / 500;
@@ -960,9 +1050,9 @@ glEnd();
 			Mat3 xMat3(	1,	0,		0,
 					0,	cos(-angle_z),	-sin(-angle_z),
 					0,	sin(-angle_z),	cos(-angle_z));
-			upVector = xMat3 * upVector;			
+			upVector = xMat3 * upVector;*/			
     		}
-	}
+	//}
 		
 	
     if(isKeyPressed('Q')){
@@ -1004,7 +1094,7 @@ glEnd();
       rotateCameraUp(rotationDelta, eyePosition,
                      centerPosition, upVector);
     }
-	if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){
+	/*if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){
 		//printf("mouse left button\n");
 		Vec2 mousePosition = mouseCurrentPosition( );
 		//std::cout << "Mouse position: " << mousePosition << std::endl;
@@ -1018,7 +1108,7 @@ glEnd();
 				myGraph.showBB = -1;
 			}
 		}
-	}
+	}*/
 
 	return !msglError( );
    }

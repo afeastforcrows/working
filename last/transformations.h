@@ -21,6 +21,8 @@ void translate(Vec3& centerPosition, float x, float y, float z);
 
 void moveLeft(Vec3& centerPosition);
 
+void quatRotate(Vec3& centerPosition, float x, float y, float z, float w);
+
 /*
  * rotateCameraLeft( ) rotates the coordinate system defined by
  * the eyePosition and upVector by degrees around the upVector.
