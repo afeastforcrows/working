@@ -101,16 +101,16 @@ void arbitratyRotation(float degrees, Vec3& eyePosition, Vec3& centerPosition, V
 	float y = axis[1]*sin(degrees/2);
 	float z = axis[2]*sin(degrees/2);//sqrt(axis[0]*axis[0] + axis[1]*axis[1]);//axis[2];
 	float w = cos(degrees/2);
-
+/*
 	Mat3 quat(
 	w*w+x*x-y*y-z*z,	2*x*y-2*w*z,		2*x*z+2*w*y,
 	2*x*y+2*w*z,		w*w-x*x+y*y-z*z,	2*y*z+2*w*x,
 	2*x*z-2*w*y,		2*y*z-2*w*x,		w*w-x*x-y*y+z*z);
-	
-	/*Mat3 quat(
+*/	
+	Mat3 quat(
 	cos(y)*cos(z), 		cos(z)*sin(x)*sin(y)-cos(x)*sin(z),	cos(x)*cos(z)*sin(y)+sin(x)*sin(z),
 	cos(y)*sin(z),		cos(x)*cos(z)+sin(x)*sin(y)*sin(z),	-cos(z)*sin(x)+cos(x)*sin(y)*sin(z),
-	-sin(y),		cos(y)*sin(x),				cos(x)*cos(y)	);*/
+	-sin(y),		cos(y)*sin(x),				cos(x)*cos(y)	);
 	centerPosition = quat * centerPosition;
 
 

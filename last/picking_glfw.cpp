@@ -847,6 +847,66 @@ public:
 		    ******/
 		return result;
   }
+
+	void drawFrustum(int x, int y, Vec3 center){
+		GLViewPort vp;
+		/*******
+		* With the double unproject technique
+		*/
+		// origin at the lower left corner; flip the y
+		int flipped_y = vp.height( ) - y - 1;
+		Vec3 nearWinCoord(x, flipped_y, 0);
+		Vec3 farWinCoord(x, flipped_y, 1);
+		Vec3 nearObjCoord, farObjCoord;
+		//_msUnProject(x, y, 0.0, mv, proj, viewport, &a, &b, &c);
+		if(!unproject(nearWinCoord, projectionMatrix, modelViewMatrix, vp, nearObjCoord)){
+			std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+			assert(false);
+		}
+		//_msUnProject(x, y, 1.0, mv, proj, viewport, &d, &e, &f);
+		if(!unproject(farWinCoord, projectionMatrix, modelViewMatrix, vp, farObjCoord)){
+			std::cerr << "Something is wrong, the omega of the unprojected winCoord is zero." << std::endl;
+			assert(false);
+		}
+		Vec3 direction1 = farObjCoord - nearObjCoord;
+		Point3 rayOrigin1(eyePosition);
+		Ray r1(rayOrigin1, direction1);
+		/* End double unproject technique
+		Ray in eye coordinates */
+		int window_y = (vp.height( ) - y) - vp.height( )/2;
+		double norm_y = double(window_y)/double(vp.height( )/2);
+		int window_x = x - vp.width( )/2;
+		double norm_x = double(window_x)/double(vp.width( )/2);
+		double near_height = atan(degreesToRadians(25.0));
+		float _y = near_height * norm_y;
+		float _x = near_height * vp.aspect( ) * norm_x;
+		Mat4 modelViewInverse = modelViewMatrix.inverse( );
+		//Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		Vec4 ray_origin(0.f, 0.f, 0.f, 1.f);
+		// near distance (3rd param) is from the perspective call,
+		// it should really come from a camera object.
+		Vec4 ray_direction(_x, _y, -1.f, 0.f);
+		//Vec4 ray_direction(1, 1, -1.f, 0.f);
+		ray_origin = modelViewInverse * ray_origin;
+		ray_direction = modelViewInverse * ray_direction;
+		Vec4 p1 = modelViewInverse * Vec4(6,6,0,0);
+		Vec4 p2 = modelViewInverse * Vec4(0,0,1,0);
+		//std::cerr << ray_origin << std::endl;
+		//std::cerr << ray_direction << std::endl;
+		Point3 rayOrigin2 = Point3(ray_origin);
+		Vec3 direction2 = ray_direction.xyz( );
+		Ray r2(rayOrigin2, direction2);
+		glLineWidth(5);
+		glColor3f(1.0, 0.0, 0.0);
+		glBegin(GL_LINES);
+		glVertex3f(p1[0], p1[1], p1[2]);
+		glVertex3f(p2[0], p2[1], p2[2]);
+		glEnd();
+		//std::cerr << r2 << std::endl;
+		/*
+		* End ray in eye coordinates
+		******/
+	}	
   
   bool render( ){
     Vec4 light0_position(10.0, 5.0, 10.0, 1.0);
@@ -963,10 +1023,6 @@ glEnd();
 	}
 
 /////////////////////////////TRACKBALL STATE////////////////////////////
-	if(isKeyPressed('O')){
-		moveLeft(centerPosition);
-		//moveLeft(centerPosition);
-	}
 	//if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	//{
 		Vec2 oldPosition = (mousePosition);
@@ -975,82 +1031,21 @@ glEnd();
 		mousePosition[1] = ((mousePosition[1]*2)/500)-1;
 
 		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){	
-			printf( "Old: (%f,%f)\n", oldPosition[0],oldPosition[1] );
-			printf( "New: (%f,%f)\n", mousePosition[0],mousePosition[1] );	
-
-			Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
-			// normalize(cross(Vec3(oldPosition[0], oldPosition[1], 0), centerPosition));
-			Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
-			Vec3 axisQ = normalize(cross(startVec, endVec));
-			float angleQ = dot(startVec, endVec);
-			//printf( "Angle: %f \n", angleQ );
-			//printf( "Axis: (%f, %f, %f) \n", axisQ[0],axisQ[1],axisQ[2] );
-			//float x = oldPosition[1] - mousePosition[1];//axisQ[0];
-			//float y = oldPosition[1] - mousePosition[1];//axisQ[1];
-			//float z = axisQ[2];
-			//float w = (angleQ);
-			Vec3 right =  normalize(cross(centerPosition-eyePosition, upVector));
-			if(oldPosition[0] != mousePosition[0] && oldPosition[1] != mousePosition[1])//only proceed if there was actual movement of the mouse
+			if(abs(mousePosition[0])<1 && abs(mousePosition[1])<1)//only proceed if the cursor is still in the window
 			{
-				
-				quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(mousePosition[0] - oldPosition[0]));
-				upVector = normalize(cross(right, centerPosition-eyePosition));
-				quatRotate(centerPosition, right[0],right[1],right[2],(mousePosition[1] - oldPosition[1]));
-				
-				//quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(oldPosition[0] - mousePosition[0]));
-				/*
-				if(mousePosition[0]>=oldPosition[0]){
-					printf( "Positive: %f\n", centerPosition[0] );
-					centerPosition[0]+=(mousePosition[0]-oldPosition[0]);
-				}
-				else{
-					printf( "Negative: %f\n", centerPosition[0] );
-					centerPosition[0]+=(mousePosition[0]-oldPosition[0]);
-				}
-				*/
-				//arbitratyRotation(w, eyePosition, centerPosition, upVector, axisQ);
-				//quatRotate(centerPosition, 1,0,6,(oldPosition[1] - mousePosition[1]));
-				//quatRotate(centerPosition, 0,0,7,(oldPosition[0] - mousePosition[0]));
+				Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
+				Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
+				Vec3 axisQ = normalize(cross(startVec, endVec));
+				float angleQ = dot(startVec, endVec);
+				Vec3 right =  normalize(cross(centerPosition-eyePosition, upVector));
 
-				// Rotate around the y axis
-				//RotateCamera(MouseDirection.y, Axis.x, Axis.y, Axis.z);
-				// Rotate around the x axis
-				//RotateCamera(MouseDirection.x, 0, 1, 0);
-			}
-/*
-			centerPosition[0] = temp.x;
-			centerPosition[1] = temp.y;
-			centerPosition[2] = temp.z;
-
-			
-			/*Mat3 quaternion = new Mat3(	(w*w)-(2*y*y)-(2*z*z),	(2*x*y)-(2*w*z),	2xz+2wy,		
-							2xy+2wz,	w^2-2x2-2z2,	2yz+2wx		
-							2xz-2wy,	2yz-2wx,	w^2-2x2-2y2);
-			*/
-			/*
-			//Vec3 f = normalize(-eyePosition);//gaze
-			//Vec3 _up = normalize(upVector);//up			
-			//Vec3 rVec = normalize(cross(f, _up));//right
-			
-			// Get the direction from the mouse cursor
-			angle_y = (float)( (oldPosition[0] - mousePosition[0]) ) / 500;		
-			angle_z = (float)( (oldPosition[1] - mousePosition[1]) ) / 500;
-
-			// Get the view vector
-			Vec3 vVector = centerPosition - eyePosition;
-	
-			centerPosition[2] = (float)(eyePosition[2] + sin(-angle_y)*vVector[0] + cos(-angle_y)*vVector[2]);
-			centerPosition[0] = (float)(eyePosition[0] + cos(-angle_y)*vVector[0] - sin(-angle_y)*vVector[2]);
-
-			Mat3 yMat3(	cos(angle_z),	0,	sin(angle_z),	
-					0,		1,	0,	
-					-sin(angle_z),	0,	cos(angle_z));
-			centerPosition = yMat3 * centerPosition;
-
-			Mat3 xMat3(	1,	0,		0,
-					0,	cos(-angle_z),	-sin(-angle_z),
-					0,	sin(-angle_z),	cos(-angle_z));
-			upVector = xMat3 * upVector;*/			
+				if(oldPosition[0] != mousePosition[0] && oldPosition[1] != mousePosition[1])//only proceed if there was actual movement of the mouse
+				{
+						quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(mousePosition[0] - oldPosition[0]));
+						upVector = normalize(cross(right, centerPosition-eyePosition));
+						quatRotate(centerPosition, right[0],right[1],right[2],(mousePosition[1] - oldPosition[1]));
+				}	
+			}	
     		}
 	//}
 		

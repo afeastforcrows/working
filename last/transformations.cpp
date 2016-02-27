@@ -62,13 +62,10 @@ void quatRotate(Vec3& centerPosition, float x, float y, float z, float w){
 
 	conjugate = conjugate.conjugate(temp);
 	result = temp.multi(quat_view);
-	//printf( "my 1: (%f, %f, %f, %f) \n", result.x,result.y,result.z,result.w );
-	//printf( "my 2: (%f, %f, %f, %f) \n", conjugate.x,conjugate.y,conjugate.z,conjugate.w );
 	result = result.multi(conjugate);
-	//printf( "my 3: (%f, %f, %f, %f) \n", result.x,result.y,result.z,result.w );
 
-	centerPosition = Vec3(result.x,result.y,result.z);//result.x, result.y, result.z);
 
+	centerPosition = Vec3(result.x,result.y,result.z);
 }
 
 
