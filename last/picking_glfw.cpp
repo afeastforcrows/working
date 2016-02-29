@@ -27,6 +27,7 @@
 
 const int numObj = 5;
 
+
 void msglVersion(void){
   fprintf(stderr, "OpenGL Version Information:\n");
   fprintf(stderr, "\tVendor: %s\n", glGetString(GL_VENDOR));
@@ -267,6 +268,7 @@ typedef struct sceneGraph{
 		showBB = -1; //keep track of which bounding volume to show
 		boolBB = true;
 		hitFlag = false; //keep track of whether the pick() hit a model
+		//myObjs[0] is the world
 		myObjs[1].FL = readPlyModel("ply/trico.ply");
 		myObjs[1].FL->translate(-2.0, 0.0, 0.0);
 		myObjs[1].FL->scale(2);
@@ -277,15 +279,17 @@ typedef struct sceneGraph{
 		myObjs[3].FL->translate(2.0, 4.0, 2.0);
 		myObjs[4].FL = readPlyModel("ply/urn.ply");
 		myObjs[4].FL->translate(-2.0, 4.0, 2.0);
-		std::string myNames[5]={"World", "Trico", "Spider", "Shark", "Urn"};
-		for(int i = 0; i < 4; i++){
+		myObjs[5].FL = readPlyModel("ply/urn.ply");
+		myObjs[5].FL->translate(-2.0, -20.0, 2.0);
+		std::string myNames[6]={"World", "Trico", "Spider", "Shark", "Urn", "Test"};
+		for(int i = 0; i < numObj; i++){
 			calcRitterBoundingSphere(myObjs[i].FL->center, &(myObjs[i].FL->radius), myObjs[i].FL);
 			myObjs[i].BB.update(Vec3(myObjs[i].FL->center[0], myObjs[i].FL->center[1], myObjs[i].FL->center[2]), myObjs[i].FL->radius);
 		}
 
 		worldBB.update(Vec3(0,0,0), 10);
 		myObjs[0].init("World", worldBB, NULL);	//scene object that represents the world
-		for(int n = 1; n < 5; n++){			//All objects begin as children of World
+		for(int n = 1; n < numObj; n++){			//All objects begin as children of World
 			myObjs[n].init(myNames[n], myObjs[n].BB, myObjs[n].FL);
 			myObjs[0].addChild(&myObjs[n]);
 			myObjs[n].addParent(&myObjs[0]);
@@ -298,18 +302,108 @@ typedef struct sceneGraph{
 		}
 	}
 
-	void draw(){
-		for(int p = 1; p <5; p++){
-			myObjs[p].FL->draw();
+	bool cullIt(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Vec3 midPoint){		
+		Vec3 planes[4];
+		planes[0] = Vec3(0,1,1);
+		planes[1] = Vec3(-1,0,1);
+		planes[2] = Vec3(1,0,1);
+		planes[3] = Vec3(0,-1,1);
+		Vec3 gaze = normalize(centerPosition-eyePosition);
+		Vec3 right = cross(gaze,upVector);
+		float angle = acos(sqrt(gaze[0]*gaze[0]+gaze[2]*gaze[2])/length(gaze));
+		Vec3 testVec;
+		
+		/*for(int x=0; x<4; x++){
+			float total = midPoint[0]*planes[x][0] + midPoint[1]*planes[x][1] + midPoint[2]*planes[x][2];
+			if(total>0){
+				return false;
+			}
+		}*/
+
+		
+
+		
+		glLineWidth(5);
+		glColor3f(1.0, 0.0, 0.0);
+		glBegin(GL_LINES);
+		glVertex3f(centerPosition[0], centerPosition[1], centerPosition[2]);
+		glVertex3f(planes[0][0], planes[0][1], planes[0][2]);
+		glEnd();
+
+		
+		//Vec3 planes[4];
+		/*
+		planes[0] = Vec3(0,1,1).rotate(angle, right[0], right[1], right[2]);
+		planes[1] = Vec3(-1,0,1).rotate(angle, right[0], right[1], right[2]);
+		planes[2] = Vec3(1,0,1).rotate(angle, right[0], right[1], right[2]);
+		planes[3] = Vec3(0,-1,1).rotate(angle, right[0], right[1], right[2]);
+		*/
+		/*
+		planes[0] = normalize(Vec3(centerPosition[0]*gaze[0],(centerPosition[1]+1)*gaze[1],(centerPosition[2]+1)*gaze[2]));
+		planes[1] = normalize(Vec3((centerPosition[0]-1)*gaze[0],centerPosition[1]*gaze[1],(centerPosition[2]+1)*gaze[2]));
+		planes[2] = normalize(Vec3((centerPosition[0]+1)*gaze[0],centerPosition[1]*gaze[1],(centerPosition[2]+1)*gaze[2]));
+		planes[3] = normalize(Vec3(centerPosition[0]*gaze[0],(centerPosition[1]-1)*gaze[1],(centerPosition[2]+1)*gaze[2]));
+		*/
+
+		for(int x=0; x<4; x++){
+			testVec = normalize(midPoint);
+			testVec -= centerPosition;
+			
+				//printf("Dot %d: %f \n", x, dot(testVec,planes[x]));
+			
+			if((dot(testVec,planes[x]))>0){
+				//printf("boop: (%f, %f, %f) - %d \n", centerPosition[0], centerPosition[1], centerPosition[2], x);			
+				//return false;
+			}
+		}
+
+		/*		
+		Vec3 myNorms[4];
+		myNorms[0] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(0,sqrt(1),sqrt(1)));
+		myNorms[1] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(-sqrt(1),0,sqrt(1)));
+		myNorms[2] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(sqrt(1),0,sqrt(1)));
+		myNorms[3] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(0,-sqrt(1),sqrt(1)));
+		Vec3 planes[4];
+		planes[0] = Vec3(0,sqrt(1),sqrt(1));
+		planes[1] = Vec3(-sqrt(1),0,sqrt(1));
+		planes[2] = Vec3(sqrt(1),0,sqrt(1));
+		planes[3] = Vec3(0,-sqrt(1),sqrt(1));
+		Vec3 testVec;
+			glLineWidth(5);
+			glColor3f(1.0, 0.0, 0.0);
+			glBegin(GL_LINES);
+			glVertex3f(centerPosition[0], centerPosition[1], centerPosition[2]);
+			glVertex3f(midPoint[0], midPoint[1], midPoint[2]);
+			glEnd();
+		for(int x=0; x<4; x++){
+			testVec = normalize(midPoint);
+			testVec -= planes[x];
+			
+				printf("Dot %d: %f \n", x, dot(testVec,myNorms[x]));
+			
+			if((dot(testVec,myNorms[x]))<0.5){
+				printf("boop: (%f, %f, %f) - %d \n", centerPosition[0], centerPosition[1], centerPosition[2], x);			
+				return false;
+			}
+		}*/
+		return true;
+	}
+
+	void draw(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector){
+		for(int p = 1; p <numObj; p++){
+			if(cullIt(normalize(centerPosition), eyePosition, upVector, Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2])))
+			{
+				myObjs[p].FL->draw();//call FaceList draw() function
+				//myObjs[p].BB.drawBB();
+			}
 			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
-			//myObjs[p].BB.drawBB();
 		}
 	}
 
-	void update(){
-		float dist;
+	void update(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector){
+		//float dist;
 		//check for collisions
-		for(int x = 0; x < numObj; x++){
+		/*for(int x = 0; x < numObj; x++){
 			for(int y = x+1; y < numObj; y++){
 				dist = distance(myObjs[x].BB.center, myObjs[y].BB.center);
 				if(dist<=(float(myObjs[x].BB.width+ myObjs[y].BB.width))){
@@ -324,10 +418,10 @@ typedef struct sceneGraph{
 					}
 				}
 			}
-		}
+		}*/
 		//update parents/children
 		updatePly();
-		draw();
+		draw(centerPosition, eyePosition, upVector);
 	}
 
 	float distance(Vec3 a, Vec3 b){
@@ -340,11 +434,29 @@ typedef struct sceneGraph{
 		//myObjs[1].addChild(&myObjs[2]);
 	}
 
-	void translate(sceneObj *s){
-		s->FL->translate(0.1,0,0);
+	void translate(sceneObj *s, float n){
+		s->FL->translate(0,n,0);
 		for(int n = 0; n < s->numChildren; n++){
-			s->children[n]->FL->translate(0.1,0,0);
+			s->children[n]->FL->translate(0,n,0);
 		}
+	}
+
+	void drawSphere(float radius, int slices, int stacks, double x, double y, double z){
+		GLUquadricObj *quadObj;
+		quadObj = gluNewQuadric();
+		//assert(quadObj);
+		
+		//gluQuadricDrawStyle(quadObj, GLU_FILL);
+  		//gluQuadricNormals(quadObj, GLU_SMOOTH);
+  		
+  		gluQuadricDrawStyle(quadObj, GLU_LINE);
+  		//gluQuadricNormals(quadObj, GLU_SMOOTH);
+
+		glTranslatef(.05f,0.1f,z);
+  		gluSphere(quadObj, radius, slices, stacks);
+
+		
+
 	}
 
 }sceneGraphd;
@@ -496,35 +608,22 @@ public:
 		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 	}
 
-
-	void drawSphere(float radius, int slices, int stacks){
-		GLUquadricObj *quadObj;
-		quadObj = gluNewQuadric();
-		assert(quadObj);
-		
-		//gluQuadricDrawStyle(quadObj, GLU_FILL);
-  		//gluQuadricNormals(quadObj, GLU_SMOOTH);
-  		
-  		gluQuadricDrawStyle(quadObj, GLU_LINE);
-  		gluQuadricNormals(quadObj, GLU_SMOOTH);
-
-		glTranslatef(0.0f, 0.8f, 0.0f);
-  		gluSphere(quadObj, radius, slices, stacks);
-	}
+	
+	
 
 	void initMySquare(){
-		float distance = 15;
+		float distance = 7;
 		//1
 		mySquare[0].a[0]=-distance;
 		mySquare[0].a[1]=-2;
 		mySquare[0].a[2]=distance;
 
 		mySquare[0].b[0]=-distance;
-		mySquare[0].b[1]=20;
+		mySquare[0].b[1]=distance;
 		mySquare[0].b[2]=distance;
 
 		mySquare[0].c[0]=distance;
-		mySquare[0].c[1]=20;
+		mySquare[0].c[1]=distance;
 		mySquare[0].c[2]=distance;
 
 		mySquare[0].d[0]=distance;
@@ -536,11 +635,11 @@ public:
 		mySquare[1].a[2]=distance;
 
 		mySquare[1].b[0]=distance;
-		mySquare[1].b[1]=20;
+		mySquare[1].b[1]=distance;
 		mySquare[1].b[2]=distance;
 
 		mySquare[1].c[0]=distance;
-		mySquare[1].c[1]=20;
+		mySquare[1].c[1]=distance;
 		mySquare[1].c[2]=-distance;
 
 		mySquare[1].d[0]=distance;
@@ -552,11 +651,11 @@ public:
 		mySquare[2].a[2]=-distance;
 
 		mySquare[2].b[0]=distance;
-		mySquare[2].b[1]=20;
+		mySquare[2].b[1]=distance;
 		mySquare[2].b[2]=-distance;
 
 		mySquare[2].c[0]=-distance;
-		mySquare[2].c[1]=20;
+		mySquare[2].c[1]=distance;
 		mySquare[2].c[2]=-distance;
 
 		mySquare[2].d[0]=-distance;
@@ -568,11 +667,11 @@ public:
 		mySquare[3].a[2]=-distance;
 
 		mySquare[3].b[0]=-distance;
-		mySquare[3].b[1]=20;
+		mySquare[3].b[1]=distance;
 		mySquare[3].b[2]=-distance;
 
 		mySquare[3].c[0]=-distance;
-		mySquare[3].c[1]=20;
+		mySquare[3].c[1]=distance;
 		mySquare[3].c[2]=distance;
 
 		mySquare[3].d[0]=-distance;
@@ -580,19 +679,19 @@ public:
 		mySquare[3].d[2]=distance;
 		//5///////////////////////////
 		mySquare[4].a[0]=-distance;
-		mySquare[4].a[1]=20;
+		mySquare[4].a[1]=distance;
 		mySquare[4].a[2]=-distance;
 
 		mySquare[4].b[0]=-distance;
-		mySquare[4].b[1]=20;
+		mySquare[4].b[1]=distance;
 		mySquare[4].b[2]=distance;
 
 		mySquare[4].c[0]=distance;
-		mySquare[4].c[1]=20;
+		mySquare[4].c[1]=distance;
 		mySquare[4].c[2]=distance;
 
 		mySquare[4].d[0]=distance;
-		mySquare[4].d[1]=20;
+		mySquare[4].d[1]=distance;
 		mySquare[4].d[2]=-distance;
 	}
 
@@ -659,6 +758,8 @@ public:
 	myGraph.init();
 
 
+
+
     // Load the shader program
     const char* vertexShaderSource = "blinn_phong.vert.glsl";
     const char* fragmentShaderSource = "blinn_phong.frag.glsl";
@@ -699,6 +800,9 @@ public:
     uShininess = glGetUniformLocation(shaderProgram.id( ), "shininess");
     
     glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+	
+	glEnable(GL_LIGHT0);
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
@@ -712,51 +816,7 @@ public:
     return true;
   }
    
-	void trackBall( float x1, float y1, float x2, float y2, float& angle, Vec3& axisOfRotation )
-	{
-		x1 = (2.0f * x1 - 500.0f)/500.0f;
-		y1 = (2.0f * y1 - 500.0f)/500.0f;
-		x2 = (2.0f * x2 - 500.0f)/500.0f;
-		y2 = (2.0f * y2 - 500.0f)/500.0f;
-
-		float changeX = (x1-x2);
-		float changeY = (y1-y2);
-		fprintf( stderr, "change it: %f, %f -- %f, %f\n", x1, y1, x2, y2);
-		if(changeX==0&&changeY==0){
-			return;
-		}
-
-		
-		eyePosition[1] += changeY;
-		eyePosition[0] += changeX;
-
-		Vec3 vVector = eyePosition-centerPosition;		
-
-		eyePosition[2] = (float)(eyePosition[2] + sin(changeX/1000)*vVector[0] + cos(changeX/1000)*vVector[2]);
-		//eyePosition[0] = (float)(eyePosition[0] + cos(speed)*vVector[0] - sin(speed)*vVector[2]);
-		/*
-		//draw vectors from our two mouse points to the center of the sphere(?)
-		Vec3 endVec((2.0f*x1-500.0f)/500.0f, (2.0f*y1-500.0f)/500.0f, 1.0f);
-		Vec3 startVec((2.0f*x2-500.0f)/500.0f, (2.0f*y2-500.0f)/500.0f, 1.0f);
-
-		endVec = endVec-eyePosition;
-		startVec = startVec-eyePosition;
-
-		axisOfRotation = cross(startVec, endVec);*/
-		/*float angle = dot(startVec, endVec);
-
-		float xx  = sqrt(abs(startVec[0])+abs(startVec[1])+abs(startVec[2]));
-		float yy  = sqrt(abs(endVec[0])+abs(endVec[1])+abs(endVec[2]));
-		angle = acos((angle/xx)/yy);*/
-		/*
-		float dot = startVec[0]*endVec[0] + startVec[1]*endVec[1] + startVec[2]*endVec[2];
-		float lenSq1 = startVec[0]*startVec[0] + startVec[1]*startVec[1] + startVec[2]*startVec[2];
-		float lenSq2 = endVec[0]*endVec[0] + endVec[1]*endVec[1] + endVec[2]*endVec[2];
-		angle = acos(dot/sqrt(lenSq1 * lenSq2));
-
-		fprintf( stderr, "Angle: %f\n", angle);
-		fprintf( stderr, "Axis of Rotation: (%f, %f, %f)\n", axisOfRotation[0], axisOfRotation[1], axisOfRotation[2] );*/
-	}
+	
 
 	bool pick(int x, int y, FaceList *fl){
 		bool result = false;
@@ -848,6 +908,8 @@ public:
 		return result;
   }
 
+	
+
 	void drawFrustum(int x, int y, Vec3 center){
 		GLViewPort vp;
 		/*******
@@ -909,24 +971,20 @@ public:
 	}	
   
   bool render( ){
-    Vec4 light0_position(10.0, 5.0, 10.0, 1.0);
-	/*fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[0][0], modelViewMatrix[0][1], modelViewMatrix[0][2], modelViewMatrix[0][3] );
-	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[1][0], modelViewMatrix[2][1], modelViewMatrix[1][2], modelViewMatrix[1][3] );
-	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2], modelViewMatrix[2][3] );
-	fprintf( stderr, "MVM: (%f, %f, %f, %f)\n", modelViewMatrix[3][0], modelViewMatrix[3][1], modelViewMatrix[3][2], modelViewMatrix[3][3] );*/
-    Vec4 light1_position(0.0, 14.0 ,0.0 ,1);
-    const Vec4 light0_specular(0.6,0.2,0.0,1);
-    const Vec4 light1_specular(0.0,0.2,0.6,1);
+	const Vec4 light0_position(14.0, 19.0, 14.0, 1.0);
+	const Vec4 light1_position(-14.0, 14.0 ,-14.0 ,1);
+	const Vec4 light0_specular(0.6,0.2,0.0,1);
+	const Vec4 light1_specular(0.0,0.2,0.6,1);
 	const Vec4 purple_light(0.5,0.0,0.5,1);
 	const Vec4 white_light(1,1,1,1);
-    // specular on teapot
-    const Vec4 one(1,1,1,1);
-    // diffuse on teapot
-    const Vec4 medium(0.5,0.5,0.5,1);
-    // ambient on teapot
-    const Vec4 small(0.2,0.2,0.2,1);
-    // shininess of teapot
-    const Vec1 high(100);
+	// specular on teapot
+	const Vec4 one(1,1,1,1);
+	// diffuse on teapot
+	const Vec4 medium(0.5,0.5,0.5,1);
+	// ambient on teapot
+	const Vec4 small(0.2,0.2,0.2,1);
+	// shininess of teapot
+	const Vec1 high(100);
 
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -951,31 +1009,43 @@ public:
     glUniform4fv(uLight0_color, 1, light0_specular); 
     glUniform4fv(uLight1_position, 1, light1); 
     glUniform4fv(uLight1_color, 1, white_light); 
-	//printf("ONE!\n");
-	myGraph.updatePly();
-	//printf("TWO!\n");
-	//if(isKeyPressed('1')){
-		myGraph.update();
-		if(isKeyPressed('2')){
-			myGraph.testPar();
-			myGraph.translate(&myGraph.myObjs[1]);
-		}
-		if(isKeyPressed('3')){
-			for(int p = 1; p < numObj; p++){
-				if(abs(dot(myGraph.myObjs[p].BB.frontNorm(),normalize(Vec3(myGraph.myObjs[p].FL->center[0], myGraph.myObjs[p].FL->center[1], myGraph.myObjs[p].FL->center[2])-eyePosition)))==1){
-					fprintf(stderr, "GOOD! %d\n", p);
-					//awesome, every box is axis aligned
-				}
-				else{
-					fprintf(stderr, "BAD! %d\n", p);//%f\n", dot(myBoxes[0].frontNorm(),normalize(eyePosition)));
-					//no bueno, box is not axis aligned.
-				}
-			}	
-		}
+	glColor3f(0.5f, 0.0f, 1.0f);	
+	if(isKeyPressed('2')){
+		myGraph.testPar();
+		myGraph.translate(&myGraph.myObjs[3],-0.1);
+	}
+	if(isKeyPressed('3')){
+		myGraph.testPar();
+		myGraph.translate(&myGraph.myObjs[3],0.1);
+	}
+	if(isKeyPressed('4')){
+		for(int p = 1; p < numObj; p++){
+			if(abs(dot(myGraph.myObjs[p].BB.frontNorm(),normalize(Vec3(myGraph.myObjs[p].FL->center[0], myGraph.myObjs[p].FL->center[1], myGraph.myObjs[p].FL->center[2])-eyePosition)))==1){
+				fprintf(stderr, "GOOD! %d\n", p);
+				//awesome, every box is axis aligned
+			}
+			else{
+				fprintf(stderr, "BAD! %d\n", p);//%f\n", dot(myBoxes[0].frontNorm(),normalize(eyePosition)));
+				//no bueno, box is not axis aligned.
+			}
+		}	
+	}
 	if(myGraph.showBB>=0 && myGraph.boolBB == true){
 		myGraph.myObjs[myGraph.showBB].BB.drawBB(); //render the bounding box of the model hit by pick()
+		//myGraph.drawSphere(myGraph.myObjs[myGraph.showBB].FL->radius, 10, 10, myGraph.myObjs[myGraph.showBB].FL->center[0],myGraph.myObjs[myGraph.showBB].FL->center[1], myGraph.myObjs[myGraph.showBB].FL->center[2]);
+		GLUquadricObj *quadObj;
+		quadObj = gluNewQuadric();
+		//assert(quadObj);
+		
+		//gluQuadricDrawStyle(quadObj, GLU_FILL);
+  		//gluQuadricNormals(quadObj, GLU_SMOOTH);
+  		
+  		gluQuadricDrawStyle(quadObj, GLU_LINE);
+  		//gluQuadricNormals(quadObj, GLU_SMOOTH);
+
+		glTranslatef(myGraph.myObjs[myGraph.showBB].FL->center[0],myGraph.myObjs[myGraph.showBB].FL->center[1], myGraph.myObjs[myGraph.showBB].FL->center[2]);
+  		gluSphere(quadObj, myGraph.myObjs[myGraph.showBB].FL->radius, 8, 8);
 	}	
-	//}
 	
     glUniform4fv(uAmbient, 1, medium); 
     glUniform4fv(uDiffuse, 1, medium); 
@@ -1031,12 +1101,12 @@ glEnd();
 		mousePosition[1] = ((mousePosition[1]*2)/500)-1;
 
 		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){	
-			if(abs(mousePosition[0])<1 && abs(mousePosition[1])<1)//only proceed if the cursor is still in the window
+			if(true)//abs(mousePosition[0])<1 && abs(mousePosition[1])<1)//only proceed if the cursor is still in the window
 			{
-				Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
-				Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
-				Vec3 axisQ = normalize(cross(startVec, endVec));
-				float angleQ = dot(startVec, endVec);
+				//Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
+				//Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
+				//Vec3 axisQ = normalize(cross(startVec, endVec));
+				//float angleQ = dot(startVec, endVec);
 				Vec3 right =  normalize(cross(centerPosition-eyePosition, upVector));
 
 				if(oldPosition[0] != mousePosition[0] && oldPosition[1] != mousePosition[1])//only proceed if there was actual movement of the mouse
@@ -1089,7 +1159,7 @@ glEnd();
       rotateCameraUp(rotationDelta, eyePosition,
                      centerPosition, upVector);
     }
-	/*if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){
+	if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){
 		//printf("mouse left button\n");
 		Vec2 mousePosition = mouseCurrentPosition( );
 		//std::cout << "Mouse position: " << mousePosition << std::endl;
@@ -1103,8 +1173,8 @@ glEnd();
 				myGraph.showBB = -1;
 			}
 		}
-	}*/
-
+	}
+	myGraph.update(centerPosition, eyePosition, eyePosition);
 	return !msglError( );
    }
 };

@@ -14,7 +14,7 @@
 
 typedef struct quaternion{
 	float x,y,z,w;
-	
+
 	quaternion multi(quaternion B){
   		quaternion C;
 
@@ -55,6 +55,8 @@ void quatRotate(Vec3& centerPosition, float x, float y, float z, float w){
 	temp.z = z * sin(w/2);
 	temp.w = cos(w/2);
 
+	w *= 50.0; //Scale w to increase/decrease trackball speed
+
 	quat_view.x = centerPosition[0];
 	quat_view.y = centerPosition[1];
 	quat_view.z = centerPosition[2];
@@ -90,75 +92,4 @@ void rotateCameraUp(float degrees, Vec3& eyePosition, Vec3& centerPosition, Vec3
 	upVector = xMat3 * upVector;
 }
 
-void arbitratyRotation(float degrees, Vec3& eyePosition, Vec3& centerPosition, Vec3& upVector, Vec3& axis){
-	
-	
-	
-	float x = axis[0]*sin(degrees/2);
-	float y = axis[1]*sin(degrees/2);
-	float z = axis[2]*sin(degrees/2);//sqrt(axis[0]*axis[0] + axis[1]*axis[1]);//axis[2];
-	float w = cos(degrees/2);
-/*
-	Mat3 quat(
-	w*w+x*x-y*y-z*z,	2*x*y-2*w*z,		2*x*z+2*w*y,
-	2*x*y+2*w*z,		w*w-x*x+y*y-z*z,	2*y*z+2*w*x,
-	2*x*z-2*w*y,		2*y*z-2*w*x,		w*w-x*x-y*y+z*z);
-*/	
-	Mat3 quat(
-	cos(y)*cos(z), 		cos(z)*sin(x)*sin(y)-cos(x)*sin(z),	cos(x)*cos(z)*sin(y)+sin(x)*sin(z),
-	cos(y)*sin(z),		cos(x)*cos(z)+sin(x)*sin(y)*sin(z),	-cos(z)*sin(x)+cos(x)*sin(y)*sin(z),
-	-sin(y),		cos(y)*sin(x),				cos(x)*cos(y)	);
-	centerPosition = quat * centerPosition;
 
-
-/*	normalize(axis);
-	float u = axis[0], v = axis[1], w = axis[2];	
-	//float l = u*u+v*v+ w*w;
-	float a = 0, b = 0, c = 0;
-	degrees = degrees/5;	
-
-	Mat4 rMat(	u*u+(u*u + w*w)*cos(degrees),	u*v*(1-cos(degrees))-w*sin(degrees),	u*w*(1-cos(degrees))+v*sin(degrees),	(a*(v*v+w*w)-u*(b*v+c*w))*(1-cos(degrees))+(b*w-c*v)*sin(degrees),
-			u*v*(1-cos(degrees))+w*sin(degrees),	v*v+(u*u+w*w)*cos(degrees),	v*w*(1-cos(degrees))-u*sin(degrees),	(b*(u*u+w*w)-v*(a*u+c*w))*(1-cos(degrees))+(c*u-a*w)*sin(degrees),
-			u*w*(1-cos(degrees))-v*sin(degrees),	v*w*(1-cos(degrees))+u*sin(degrees),	w*w+(u*u+v*v)*cos(degrees),	(c*(u*u+v*v)-w*(a*u+b*v))*(1-cos(degrees))+(a*v-b*u)*sin(degrees),
-			0,				0,				0,				1);
-
-	Mat3 rMat3(	u*u+(v*v + w*w)*cos(degrees),		u*v*(1-cos(degrees))-w*sin(degrees),	u*w*(1-cos(degrees))+v*sin(degrees),
-			u*v*(1-cos(degrees))+w*sin(degrees),	v*v+(u*u+w*w)*cos(degrees),		v*w*(1-cos(degrees))-u*sin(degrees),
-			u*w*(1-cos(degrees))-v*sin(degrees),	v*w*(1-cos(degrees))+u*sin(degrees),	w*w+(u*u+v*v)*cos(degrees));
-
-	//axis = Vec3(1,0,0);
-	u = axis[0], v = axis[1], w = axis[2];
-	degrees = 0.01f;
-
-	float t = (1- cos(degrees));
-	float C = cos(degrees);
-	float S = sin(degrees);
-	Mat3 rMat2(	t*u*u+C,	t*u*v-S*w,	t*u*w+S*v,
-			t*u*v+S*w,	t*v*v+C,	t*v*w-S*u,
-			t*u*w-S*v,	t*v*w+S*u,	t*w*w+C);
-	/*
-	Vec4 myEye(eyePosition, 0);
-	myEye = rMat * myEye;
-	eyePosition = Vec3(myEye[0], myEye[1], myEye[2]);
-
-	Vec4 myCenter(centerPosition, 0);
-	myCenter = rMat * myCenter;
-	centerPosition = Vec3(myCenter[0], myCenter[1], myCenter[2]);
-
-	Vec4 myUp(upVector, 0);
-	myUp = rMat * myUp;
-	upVector = Vec3(myUp[0], myUp[1], myUp[2]);
-	///end here
-	eyePosition = rMat2 * eyePosition;
-	centerPosition = rMat2 * centerPosition;
-	upVector = rMat2 * upVector;
-
-	//Vec3 f = normalize(-eyePosition);//gaze
-	//Vec3 _up = normalize(upVector);//up
-	//Vec3 s = normalize(cross(f, _up));//right
-  	//Vec3 u = cross(s, f);
- 	//Mat3 m = rotate3(-degrees, axis);
-  	//upVector = axis;
-  	//eyePosition = m * eyePosition;
-	//eyePosition[1] += degrees;*/
-}
