@@ -302,26 +302,19 @@ typedef struct sceneGraph{
 		}
 	}
 
-	bool cullIt(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Vec3 midPoint){		
-		Vec3 planes[4];
-		planes[0] = Vec3(0,1,1);
-		planes[1] = Vec3(-1,0,1);
-		planes[2] = Vec3(1,0,1);
-		planes[3] = Vec3(0,-1,1);
+	bool cullIt(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Vec3 midPoint, Mat4 modelViewMatrix){		
+		
+		Mat4 modelViewInverse = modelViewMatrix.inverse( );
 		Vec3 gaze = normalize(centerPosition-eyePosition);
 		Vec3 right = cross(gaze,upVector);
-		float angle = acos(sqrt(gaze[0]*gaze[0]+gaze[2]*gaze[2])/length(gaze));
+		float angleX = acos(sqrt(gaze[0]*gaze[0]+gaze[2]*gaze[2])/length(gaze));
+		float angleY = acos(sqrt(gaze[1]*gaze[1]+gaze[2]*gaze[2])/length(gaze));
 		Vec3 testVec;
+		Mat3 rotX = rotate3(angleX, upVector[0], upVector[1], upVector[2]);
+		Mat3 rotY = rotate3(angleY, right[0], right[1], right[2]);
+		Vec4 planes[4];
+		planes[0] = modelViewInverse*Vec4(-1,1,0,1);
 		
-		/*for(int x=0; x<4; x++){
-			float total = midPoint[0]*planes[x][0] + midPoint[1]*planes[x][1] + midPoint[2]*planes[x][2];
-			if(total>0){
-				return false;
-			}
-		}*/
-
-		
-
 		
 		glLineWidth(5);
 		glColor3f(1.0, 0.0, 0.0);
@@ -331,67 +324,27 @@ typedef struct sceneGraph{
 		glEnd();
 
 		
-		//Vec3 planes[4];
-		/*
-		planes[0] = Vec3(0,1,1).rotate(angle, right[0], right[1], right[2]);
-		planes[1] = Vec3(-1,0,1).rotate(angle, right[0], right[1], right[2]);
-		planes[2] = Vec3(1,0,1).rotate(angle, right[0], right[1], right[2]);
-		planes[3] = Vec3(0,-1,1).rotate(angle, right[0], right[1], right[2]);
-		*/
-		/*
-		planes[0] = normalize(Vec3(centerPosition[0]*gaze[0],(centerPosition[1]+1)*gaze[1],(centerPosition[2]+1)*gaze[2]));
-		planes[1] = normalize(Vec3((centerPosition[0]-1)*gaze[0],centerPosition[1]*gaze[1],(centerPosition[2]+1)*gaze[2]));
-		planes[2] = normalize(Vec3((centerPosition[0]+1)*gaze[0],centerPosition[1]*gaze[1],(centerPosition[2]+1)*gaze[2]));
-		planes[3] = normalize(Vec3(centerPosition[0]*gaze[0],(centerPosition[1]-1)*gaze[1],(centerPosition[2]+1)*gaze[2]));
-		*/
-
+		
 		for(int x=0; x<4; x++){
 			testVec = normalize(midPoint);
 			testVec -= centerPosition;
 			
 				//printf("Dot %d: %f \n", x, dot(testVec,planes[x]));
 			
-			if((dot(testVec,planes[x]))>0){
+			if((dot(Vec4(testVec,1),planes[x]))>0){
 				//printf("boop: (%f, %f, %f) - %d \n", centerPosition[0], centerPosition[1], centerPosition[2], x);			
 				//return false;
 			}
 		}
 
-		/*		
-		Vec3 myNorms[4];
-		myNorms[0] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(0,sqrt(1),sqrt(1)));
-		myNorms[1] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(-sqrt(1),0,sqrt(1)));
-		myNorms[2] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(sqrt(1),0,sqrt(1)));
-		myNorms[3] = normalize(Vec3(centerPosition[0],centerPosition[0],centerPosition[0])-Vec3(0,-sqrt(1),sqrt(1)));
-		Vec3 planes[4];
-		planes[0] = Vec3(0,sqrt(1),sqrt(1));
-		planes[1] = Vec3(-sqrt(1),0,sqrt(1));
-		planes[2] = Vec3(sqrt(1),0,sqrt(1));
-		planes[3] = Vec3(0,-sqrt(1),sqrt(1));
-		Vec3 testVec;
-			glLineWidth(5);
-			glColor3f(1.0, 0.0, 0.0);
-			glBegin(GL_LINES);
-			glVertex3f(centerPosition[0], centerPosition[1], centerPosition[2]);
-			glVertex3f(midPoint[0], midPoint[1], midPoint[2]);
-			glEnd();
-		for(int x=0; x<4; x++){
-			testVec = normalize(midPoint);
-			testVec -= planes[x];
-			
-				printf("Dot %d: %f \n", x, dot(testVec,myNorms[x]));
-			
-			if((dot(testVec,myNorms[x]))<0.5){
-				printf("boop: (%f, %f, %f) - %d \n", centerPosition[0], centerPosition[1], centerPosition[2], x);			
-				return false;
-			}
-		}*/
+		
 		return true;
 	}
 
-	void draw(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector){
+	void draw(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Mat4 modelViewMatrix){
 		for(int p = 1; p <numObj; p++){
-			if(cullIt(normalize(centerPosition), eyePosition, upVector, Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2])))
+			//if(cullIt(normalize(centerPosition), eyePosition, upVector, Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), modelViewMatrix))
+			if(true)
 			{
 				myObjs[p].FL->draw();//call FaceList draw() function
 				//myObjs[p].BB.drawBB();
@@ -400,7 +353,7 @@ typedef struct sceneGraph{
 		}
 	}
 
-	void update(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector){
+	void update(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Mat4 modelViewMatrix){
 		//float dist;
 		//check for collisions
 		/*for(int x = 0; x < numObj; x++){
@@ -421,7 +374,7 @@ typedef struct sceneGraph{
 		}*/
 		//update parents/children
 		updatePly();
-		draw(centerPosition, eyePosition, upVector);
+		draw(centerPosition, eyePosition, upVector, modelViewMatrix);
 	}
 
 	float distance(Vec3 a, Vec3 b){
@@ -1174,7 +1127,7 @@ glEnd();
 			}
 		}
 	}
-	myGraph.update(centerPosition, eyePosition, eyePosition);
+	myGraph.update(centerPosition, eyePosition, eyePosition, modelViewMatrix);
 	return !msglError( );
    }
 };
