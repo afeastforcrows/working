@@ -25,7 +25,7 @@ endif
 
 TARGET = picking
 # C++ Files
-CXXFILES =   picking_glfw.cpp glut_teapot.cpp transformations.cpp PlyModel.cpp binary-search-tree/Tree_driver.cpp
+CXXFILES =   picking_glfw.cpp glut_teapot.cpp transformations.cpp PlyModel.cpp Trackball.cpp
 CFILES =  
 # Headers
 HEADERS =  

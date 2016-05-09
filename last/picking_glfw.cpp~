@@ -25,7 +25,7 @@
 #include "glut_teapot.h"
 #include "binary-search-tree/Tree.h"
 
-const int numObj = 5;
+const int numObj = 4;
 
 
 void msglVersion(void){
@@ -343,11 +343,12 @@ typedef struct sceneGraph{
 
 	void draw(Vec3 centerPosition, Vec3 eyePosition, Vec3 upVector, Mat4 modelViewMatrix){
 		for(int p = 1; p <numObj; p++){
-			/*if(cullIt(normalize(centerPosition), eyePosition, upVector, Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), modelViewMatrix))
+			//if(cullIt(normalize(centerPosition), eyePosition, upVector, Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), modelViewMatrix))
+			if(true)
 			{
 				myObjs[p].FL->draw();//call FaceList draw() function
 				//myObjs[p].BB.drawBB();
-			}*/
+			}
 			myObjs[p].BB.update(Vec3(myObjs[p].FL->center[0], myObjs[p].FL->center[1], myObjs[p].FL->center[2]), myObjs[p].FL->radius);
 		}
 	}
@@ -444,6 +445,7 @@ private:
   float rotationDelta;
 
 	Vec2 mousePosition;
+	Vec3 mousePos;
 
   Vec3 centerPosition;
   Vec3 eyePosition;
@@ -985,6 +987,7 @@ public:
 	if(myGraph.showBB>=0 && myGraph.boolBB == true){
 		myGraph.myObjs[myGraph.showBB].BB.drawBB(); //render the bounding box of the model hit by pick()
 		//myGraph.drawSphere(myGraph.myObjs[myGraph.showBB].FL->radius, 10, 10, myGraph.myObjs[myGraph.showBB].FL->center[0],myGraph.myObjs[myGraph.showBB].FL->center[1], myGraph.myObjs[myGraph.showBB].FL->center[2]);
+		//draw the phere
 		GLUquadricObj *quadObj;
 		quadObj = gluNewQuadric();
 		//assert(quadObj);
@@ -1047,26 +1050,20 @@ glEnd();
 /////////////////////////////TRACKBALL STATE////////////////////////////
 	//if (isKeyPressed(GLFW_KEY_LEFT_SHIFT)||isKeyPressed(GLFW_KEY_RIGHT_SHIFT))
 	//{
-		Vec2 oldPosition = (mousePosition);
+		Vec3 oldPosition = (mousePos);
 		mousePosition = (mouseCurrentPosition( ));
 		mousePosition[0] = ((mousePosition[0]*2)/500)-1;
 		mousePosition[1] = ((mousePosition[1]*2)/500)-1;
+		mousePos = Vec3(mousePosition[0], mousePosition[1], 0);
 
 		if(mouseButtonFlags( ) == GLFWApp::MOUSE_BUTTON_LEFT){	
 			if(true)//abs(mousePosition[0])<1 && abs(mousePosition[1])<1)//only proceed if the cursor is still in the window
 			{
-				//Vec3 startVec = (centerPosition-Vec3(oldPosition[0], oldPosition[1], 0));
-				//Vec3 endVec = (centerPosition-Vec3(mousePosition[0], mousePosition[1], 0));
-				//Vec3 axisQ = normalize(cross(startVec, endVec));
-				//float angleQ = dot(startVec, endVec);
-				Vec3 right =  normalize(cross(centerPosition-eyePosition, upVector));
-
-				if(oldPosition[0] != mousePosition[0] && oldPosition[1] != mousePosition[1])//only proceed if there was actual movement of the mouse
-				{
-						quatRotate(centerPosition, upVector[0],upVector[1],upVector[2],(mousePosition[0] - oldPosition[0]));
-						upVector = normalize(cross(right, centerPosition-eyePosition));
-						quatRotate(centerPosition, right[0],right[1],right[2],(mousePosition[1] - oldPosition[1]));
-				}	
+				Vec3 axis = cross(mousePos-Vec3(0,0,0.5),oldPosition-Vec3(0,0,0.5));
+				float angle = 200;//atan(radiansToDegrees(dot(mousePos-Vec3(0,0.5,0),oldPosition-Vec3(0,0.5,0))));
+				Mat3 rot = rotate3(angle, axis[0], axis[1], axis[2]);
+				centerPosition = rot * centerPosition;
+				printf( "(%f,%f,%f) and %f \n", axis[0], axis[1], axis[2], angle);
 			}	
     		}
 	//}

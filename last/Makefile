@@ -25,10 +25,10 @@ endif
 
 TARGET = picking
 # C++ Files
-CXXFILES =   picking_glfw.cpp glut_teapot.cpp transformations.cpp PlyModel.cpp
+CXXFILES =   picking_glfw.cpp glut_teapot.cpp transformations.cpp PlyModel.cpp Trackball.cpp
 CFILES =  
 # Headers
-HEADERS =  
+HEADERS =  Trackball.h
 
 OBJECTS = $(CXXFILES:.cpp=.o) $(CFILES:.c=.o)
 
